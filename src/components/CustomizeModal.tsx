@@ -17,7 +17,7 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
   const [accentColor, setAccentColor] = useState("#FFD700");
   const [themeStyle, setThemeStyle] = useState(template?.name || "");
   const [menuItems, setMenuItems] = useState([{ label: "", url: "" }]);
-  const [socialLinks, setSocialLinks] = useState([""]);
+  
   const [stats, setStats] = useState([{ number: "", label: "" }]);
   const [testimonialQuote, setTestimonialQuote] = useState("");
   const [testimonialName, setTestimonialName] = useState("");
@@ -99,19 +99,6 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
               className="flex items-center gap-1 text-xs text-primary hover:underline"><Plus size={14} /> Add menu item</button>
           </div>
 
-          {/* Social Links */}
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">Social Links</label>
-            {socialLinks.map((link, i) => (
-              <div key={i} className="flex gap-2 mb-2">
-                <input value={link} onChange={(e) => { const n = [...socialLinks]; n[i] = e.target.value; setSocialLinks(n); }}
-                  placeholder="instagram.com/yourhandle" className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground" />
-                <button onClick={() => setSocialLinks(socialLinks.filter((_, j) => j !== i))} className="text-destructive"><Trash2 size={16} /></button>
-              </div>
-            ))}
-            <button onClick={() => setSocialLinks([...socialLinks, ""])}
-              className="flex items-center gap-1 text-xs text-primary hover:underline"><Plus size={14} /> Add link</button>
-          </div>
 
           {/* Stats */}
           <div>
