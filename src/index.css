@@ -81,7 +81,7 @@
     background-size: 60px 60px;
   }
   .template-card {
-    @apply glass-card overflow-hidden group cursor-pointer transition-all duration-500;
+    @apply glass-card overflow-hidden cursor-pointer transition-all duration-500;
   }
   .template-card:hover {
     @apply neon-glow-cyan border-primary/50 scale-[1.03];
