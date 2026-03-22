@@ -17,7 +17,7 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
   const [accentColor, setAccentColor] = useState("#FFD700");
   const [themeStyle, setThemeStyle] = useState(template?.name || "");
   const [menuItems, setMenuItems] = useState([{ label: "", url: "" }]);
-  const [socialLinks, setSocialLinks] = useState([""]);
+  
   const [stats, setStats] = useState([{ number: "", label: "" }]);
   const [testimonialQuote, setTestimonialQuote] = useState("");
   const [testimonialName, setTestimonialName] = useState("");
