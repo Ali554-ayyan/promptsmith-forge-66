@@ -48,7 +48,7 @@ const Home = () => {
         <div className="container mx-auto grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl">
           {templates.slice(0, 6).map((t, i) => (
             <Link to="/templates" key={t.id}
-              className="template-card animate-fade-in"
+              className="template-card group animate-fade-in"
               style={{ animationDelay: `${i * 0.1}s` }}>
               <img src={t.image} alt={t.name} className="w-full aspect-video object-cover" />
               <div className="p-3">
