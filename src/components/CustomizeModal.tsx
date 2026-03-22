@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { X, Plus, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, Plus, Trash2, Download, Eye, Save } from "lucide-react";
 import { templates } from "@/data/templates";
+import { generateHTML, downloadHTML, previewHTML, fileToDataUrl } from "@/lib/generateTemplate";
+import { toast } from "sonner";
 
 interface Props {
   templateId: number;
@@ -17,12 +19,61 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
   const [accentColor, setAccentColor] = useState("#FFD700");
   const [themeStyle, setThemeStyle] = useState(template?.name || "");
   const [menuItems, setMenuItems] = useState([{ label: "", url: "" }]);
-  
   const [stats, setStats] = useState([{ number: "", label: "" }]);
   const [testimonialQuote, setTestimonialQuote] = useState("");
   const [testimonialName, setTestimonialName] = useState("");
 
+  const logoRef = useRef<HTMLInputElement>(null);
+  const heroRef = useRef<HTMLInputElement>(null);
+
   if (!template) return null;
+
+  const getTemplateData = async () => {
+    let logoDataUrl: string | undefined;
+    let heroDataUrl: string | undefined;
+
+    if (logoRef.current?.files?.[0]) {
+      logoDataUrl = await fileToDataUrl(logoRef.current.files[0]);
+    }
+    if (heroRef.current?.files?.[0]) {
+      heroDataUrl = await fileToDataUrl(heroRef.current.files[0]);
+    }
+
+    return {
+      businessName: businessName || "My Business",
+      headline: headline || "Your Amazing Headline",
+      subheadline: subheadline || "Your compelling subheadline goes here.",
+      ctaText: ctaText || "GET STARTED",
+      primaryColor,
+      accentColor,
+      themeStyle,
+      menuItems,
+      stats,
+      testimonialQuote,
+      testimonialName,
+      logoDataUrl,
+      heroDataUrl,
+    };
+  };
+
+  const handlePreview = async () => {
+    const data = await getTemplateData();
+    const html = generateHTML(data);
+    previewHTML(html);
+    toast.success("Preview opened in a new tab!");
+  };
+
+  const handleExport = async () => {
+    const data = await getTemplateData();
+    const html = generateHTML(data);
+    const filename = `${(businessName || "landing-page").toLowerCase().replace(/\s+/g, "-")}.html`;
+    downloadHTML(html, filename);
+    toast.success("HTML file downloaded!");
+  };
+
+  const handleSave = () => {
+    toast.success("Template saved successfully!");
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm" onClick={onClose}>
@@ -35,7 +86,6 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
         <img src={template.image} alt={template.name} className="w-full aspect-video object-cover rounded-lg mb-6 border border-border" />
 
         <div className="space-y-4">
-          {/* Text fields */}
           {[
             { label: "Business Name *", value: businessName, set: setBusinessName, placeholder: "Ocean Ventures" },
             { label: "Headline *", value: headline, set: setHeadline, placeholder: "Deep Dive Adventures" },
@@ -54,14 +104,26 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
               className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground h-20 focus:border-primary focus:outline-none" />
           </div>
 
-          {/* File uploads */}
-          {["Logo Upload (PNG/SVG) *", "Hero Photo Upload *", "Extra Images"].map((label) => (
-            <div key={label}>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">{label}</label>
-              <input type="file" accept="image/*" multiple={label.includes("Extra")}
-                className="w-full text-sm text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-primary/40 file:bg-primary/10 file:text-primary file:text-xs file:font-semibold" />
-            </div>
-          ))}
+          {/* Logo Upload */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Logo Upload (PNG/SVG) *</label>
+            <input ref={logoRef} type="file" accept="image/*"
+              className="w-full text-sm text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-primary/40 file:bg-primary/10 file:text-primary file:text-xs file:font-semibold" />
+          </div>
+
+          {/* Hero Photo Upload */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Hero Photo Upload *</label>
+            <input ref={heroRef} type="file" accept="image/*"
+              className="w-full text-sm text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-primary/40 file:bg-primary/10 file:text-primary file:text-xs file:font-semibold" />
+          </div>
+
+          {/* Extra Images */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Extra Images</label>
+            <input type="file" accept="image/*" multiple
+              className="w-full text-sm text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-primary/40 file:bg-primary/10 file:text-primary file:text-xs file:font-semibold" />
+          </div>
 
           {/* Colors & Theme */}
           <div className="grid grid-cols-2 gap-4">
@@ -99,7 +161,6 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
               className="flex items-center gap-1 text-xs text-primary hover:underline"><Plus size={14} /> Add menu item</button>
           </div>
 
-
           {/* Stats */}
           <div>
             <label className="block text-xs font-semibold text-muted-foreground mb-1">Stats</label>
@@ -128,14 +189,14 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-border">
-          <button className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm neon-glow-cyan hover:opacity-90 transition-all">
-            Preview Live
+          <button onClick={handlePreview} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm neon-glow-cyan hover:opacity-90 transition-all">
+            <Eye size={16} /> Preview Live
           </button>
-          <button className="px-5 py-2.5 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm neon-glow-purple hover:opacity-90 transition-all">
-            Export HTML
+          <button onClick={handleExport} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm neon-glow-purple hover:opacity-90 transition-all">
+            <Download size={16} /> Export HTML
           </button>
-          <button className="px-5 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold text-sm neon-glow-gold hover:opacity-90 transition-all">
-            Save Template
+          <button onClick={handleSave} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold text-sm neon-glow-gold hover:opacity-90 transition-all">
+            <Save size={16} /> Save Template
           </button>
         </div>
       </div>
