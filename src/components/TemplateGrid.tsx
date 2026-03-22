@@ -32,7 +32,7 @@ const TemplateGrid = ({ onSelect, showFilter = true }: Props) => {
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map((t) => (
-          <div key={t.id} className="template-card" onClick={() => onSelect?.(t.id)}>
+          <div key={t.id} className="template-card group" onClick={() => onSelect?.(t.id)}>
             <div className="aspect-video overflow-hidden">
               <img src={t.image} alt={t.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
             </div>
