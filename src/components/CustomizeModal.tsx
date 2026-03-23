@@ -63,16 +63,13 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
     toast.success("Preview opened in a new tab!");
   };
 
-  const handleExport = async () => {
+  const handleDownloadImage = async (format: "jpeg" | "png") => {
     const data = await getTemplateData();
     const html = generateHTML(data);
-    const filename = `${(businessName || "landing-page").toLowerCase().replace(/\s+/g, "-")}.html`;
-    downloadHTML(html, filename);
-    toast.success("HTML file downloaded!");
-  };
-
-  const handleSave = () => {
-    toast.success("Template saved successfully!");
+    const filename = `${(businessName || "landing-page").toLowerCase().replace(/\s+/g, "-")}.${format}`;
+    toast.info("Rendering full template… please wait.");
+    await downloadAsImage(html, filename, format);
+    toast.success(`${format.toUpperCase()} downloaded!`);
   };
 
   return (
