@@ -1,3 +1,13 @@
+import template1 from "@/assets/template-1.png";
+import template2 from "@/assets/template-2.jpg";
+import template3 from "@/assets/template-3.jpg";
+import template4 from "@/assets/template-4.jpg";
+import template5 from "@/assets/template-5.jpg";
+import template6 from "@/assets/template-6.jpg";
+import template7 from "@/assets/template-7.jpg";
+import template8 from "@/assets/template-8.jpg";
+import template9 from "@/assets/template-9.jpg";
+
 interface TemplateData {
   businessName: string;
   headline: string;
@@ -14,390 +24,946 @@ interface TemplateData {
   heroDataUrl?: string;
 }
 
+const templateImageMap: Record<string, string> = {
+  "Alphabet Creative": template1,
+  "Futuristic Exhibition": template2,
+  "Geometric Shapes": template3,
+  "Fashion Forward": template4,
+  "Polygonal Burst": template5,
+  "Education Portal": template6,
+  "Ocean Dive": template7,
+  "Corporate Landing": template8,
+  "Space Creative": template9,
+};
+
 function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+  const normalized = hex.replace("#", "");
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function absoluteAssetUrl(path?: string) {
+  if (!path) return "";
+  if (/^https?:/i.test(path) || path.startsWith("data:")) return path;
+  return new URL(path, window.location.origin).href;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function waitForImages(doc: Document) {
+  const images = Array.from(doc.images);
+
+  return Promise.all(
+    images.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete) {
+            resolve();
+            return;
+          }
+
+          const cleanup = () => {
+            img.removeEventListener("load", handleDone);
+            img.removeEventListener("error", handleDone);
+          };
+
+          const handleDone = () => {
+            cleanup();
+            resolve();
+          };
+
+          img.addEventListener("load", handleDone, { once: true });
+          img.addEventListener("error", handleDone, { once: true });
+        }),
+    ),
+  );
+}
+
+async function prepareIframeDocument(doc: Document) {
+  await waitForImages(doc);
+
+  if ("fonts" in doc) {
+    try {
+      // @ts-expect-error browser fonts API exists in runtime
+      await doc.fonts.ready;
+    } catch {
+      // ignore font readiness failures
+    }
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
 }
 
 export function generateHTML(data: TemplateData): string {
+  const primaryColor = data.primaryColor || "#00BFFF";
+  const accentColor = data.accentColor || "#FFD700";
+  const templateImageUrl = absoluteAssetUrl(templateImageMap[data.themeStyle] || template8);
+  const heroImageUrl = absoluteAssetUrl(data.heroDataUrl);
+  const logoImageUrl = absoluteAssetUrl(data.logoDataUrl);
+
+  const words = (data.headline || "Your Amazing Headline").trim().split(/\s+/);
+  const splitIndex = Math.max(1, Math.ceil(words.length / 2));
+  const firstLine = escapeHtml(words.slice(0, splitIndex).join(" "));
+  const secondLine = escapeHtml(words.slice(splitIndex).join(" "));
+
   const menuHTML = data.menuItems
-    .filter((m) => m.label)
-    .map((m) => `<a href="${m.url || '#'}" class="nav-link">${m.label}</a>`)
+    .filter((item) => item.label)
+    .map(
+      (item) =>
+        `<a href="${escapeHtml(item.url || "#")}" class="nav-link">${escapeHtml(item.label)}</a>`,
+    )
     .join("");
 
-  const defaultMenu = !menuHTML
-    ? `<a href="#" class="nav-link">HOME</a><a href="#about" class="nav-link">ABOUT US</a><a href="#features" class="nav-link">FAQ</a><a href="#contact" class="nav-link">CONTACT</a>`
-    : menuHTML;
+  const finalMenu =
+    menuHTML ||
+    '<a href="#hero" class="nav-link">HOME</a><a href="#about" class="nav-link">ABOUT US</a><a href="#features" class="nav-link">FEATURES</a><a href="#contact" class="nav-link">CONTACT</a>';
 
   const statsHTML = data.stats
-    .filter((s) => s.number || s.label)
-    .map((s) => `
-      <div class="stat-card">
-        <div class="stat-number">${s.number}</div>
-        <div class="stat-label">${s.label}</div>
-        <div class="stat-glow"></div>
-      </div>`)
+    .filter((item) => item.number || item.label)
+    .map(
+      (item) => `
+        <div class="stat-card">
+          <div class="stat-number">${escapeHtml(item.number || "0")}</div>
+          <div class="stat-label">${escapeHtml(item.label || "Metric")}</div>
+        </div>`,
+    )
     .join("");
 
+  const finalStats =
+    statsHTML ||
+    `
+      <div class="stat-card"><div class="stat-number">50K+</div><div class="stat-label">Creators</div></div>
+      <div class="stat-card"><div class="stat-number">4.98</div><div class="stat-label">Rating</div></div>
+      <div class="stat-card"><div class="stat-number">60s</div><div class="stat-label">Setup Time</div></div>
+      <div class="stat-card"><div class="stat-number">24/7</div><div class="stat-label">Support</div></div>
+    `;
+
   const testimonialHTML = data.testimonialQuote
-    ? `<section class="testimonial-section">
+    ? `
+      <section class="testimonial-section">
         <div class="testimonial-card">
-          <div class="quote-icon">❝</div>
-          <p class="quote-text">${data.testimonialQuote}</p>
-          ${data.testimonialName ? `<div class="quote-author">
-            <div class="author-avatar">${data.testimonialName.charAt(0)}</div>
-            <span>— ${data.testimonialName}</span>
-          </div>` : ""}
+          <div class="quote-mark">❝</div>
+          <p class="testimonial-copy">${escapeHtml(data.testimonialQuote)}</p>
+          ${
+            data.testimonialName
+              ? `<div class="testimonial-author">— ${escapeHtml(data.testimonialName)}</div>`
+              : ""
+          }
         </div>
       </section>`
     : "";
 
-  const logoImg = data.logoDataUrl
-    ? `<div class="logo-wrap"><img src="${data.logoDataUrl}" alt="Logo" class="logo-img" /><span class="logo-text">${data.businessName}</span></div>`
-    : `<div class="logo-wrap"><div class="logo-dot"></div><span class="logo-text">${data.businessName}</span></div>`;
-
-  const heroImg = data.heroDataUrl
-    ? `<div class="hero-image-wrap">
-        <div class="hero-image-glow"></div>
-        <div class="floating-obj obj-1"></div>
-        <div class="floating-obj obj-2"></div>
-        <div class="floating-obj obj-3"></div>
-        <div class="floating-obj obj-4"></div>
-        <div class="floating-obj obj-5"></div>
-        <div class="geometric-frame"></div>
-        <img src="${data.heroDataUrl}" alt="Hero" class="hero-img" />
-       </div>`
-    : `<div class="hero-image-wrap">
-        <div class="hero-image-glow"></div>
-        <div class="floating-obj obj-1"></div>
-        <div class="floating-obj obj-2"></div>
-        <div class="floating-obj obj-3"></div>
-        <div class="floating-obj obj-4"></div>
-        <div class="floating-obj obj-5"></div>
-        <div class="geometric-frame"></div>
-        <div class="hero-placeholder">
-          <span>${data.businessName.charAt(0)}</span>
-        </div>
-       </div>`;
-
-  const pc = data.primaryColor;
-  const ac = data.accentColor;
+  const brandName = escapeHtml(data.businessName || "My Business");
+  const subheadline = escapeHtml(data.subheadline || "Your compelling subheadline goes here.");
+  const ctaText = escapeHtml(data.ctaText || "GET STARTED");
+  const themeStyle = escapeHtml(data.themeStyle || "Premium Theme");
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>${data.businessName} — ${data.headline}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${brandName} — ${escapeHtml(data.headline || "Your Amazing Headline")}</title>
+  <base href="${window.location.origin}/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Outfit',sans-serif;background:#070d1a;color:#e2e8f0;overflow-x:hidden;min-height:100vh}
-
-    /* ===== ANIMATED BG ===== */
-    body::before{content:'';position:fixed;inset:0;background:
-      radial-gradient(ellipse 80% 50% at 20% 40%, ${hexToRgba(pc, 0.08)} 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 80% 30%, ${hexToRgba(ac, 0.06)} 0%, transparent 60%),
-      radial-gradient(ellipse 40% 30% at 50% 80%, ${hexToRgba(pc, 0.04)} 0%, transparent 60%);
-      pointer-events:none;z-index:0}
-    
-    /* Grid pattern */
-    body::after{content:'';position:fixed;inset:0;background-image:
-      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-      background-size:60px 60px;pointer-events:none;z-index:0}
-
-    /* Particle dots */
-    .particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-    .particle{position:absolute;width:3px;height:3px;background:${ac};border-radius:50%;opacity:0;animation:particleFloat 8s infinite}
-    .particle:nth-child(1){left:10%;top:20%;animation-delay:0s}
-    .particle:nth-child(2){left:30%;top:60%;animation-delay:1.5s}
-    .particle:nth-child(3){left:50%;top:30%;animation-delay:3s}
-    .particle:nth-child(4){left:70%;top:70%;animation-delay:4.5s}
-    .particle:nth-child(5){left:85%;top:15%;animation-delay:2s}
-    .particle:nth-child(6){left:15%;top:80%;animation-delay:5.5s}
-    .particle:nth-child(7){left:60%;top:50%;animation-delay:1s}
-    .particle:nth-child(8){left:90%;top:45%;animation-delay:3.5s}
-    @keyframes particleFloat{0%{opacity:0;transform:translateY(0) scale(0)}20%{opacity:0.8}50%{opacity:0.4}100%{opacity:0;transform:translateY(-200px) scale(1.5)}}
-
-    /* ===== NAV ===== */
-    nav{display:flex;align-items:center;justify-content:space-between;padding:20px 60px;background:rgba(7,13,26,0.7);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05);position:sticky;top:0;z-index:100}
-    .logo-wrap{display:flex;align-items:center;gap:10px}
-    .logo-dot{width:32px;height:32px;background:linear-gradient(135deg,${pc},${ac});border-radius:8px;box-shadow:0 0 20px ${hexToRgba(pc, 0.4)}}
-    .logo-img{height:36px;object-fit:contain}
-    .logo-text{font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;color:#fff}
-    .nav-links{display:flex;align-items:center;gap:8px}
-    .nav-link{color:rgba(255,255,255,0.7);text-decoration:none;padding:8px 18px;font-size:0.85rem;font-weight:500;letter-spacing:1px;text-transform:uppercase;transition:all .3s;border-radius:8px}
-    .nav-link:hover{color:#fff;background:rgba(255,255,255,0.05)}
-
-    /* ===== HERO ===== */
-    .hero{min-height:100vh;display:flex;align-items:center;padding:80px 60px;position:relative;z-index:1}
-    .hero-content{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;width:100%;max-width:1400px;margin:0 auto}
-    .hero-left{position:relative;z-index:2}
-    .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;background:${hexToRgba(pc, 0.1)};border:1px solid ${hexToRgba(pc, 0.3)};border-radius:50px;font-size:0.75rem;font-weight:600;color:${pc};margin-bottom:28px;letter-spacing:1px;text-transform:uppercase}
-    .hero-badge::before{content:'';width:6px;height:6px;background:${pc};border-radius:50%;box-shadow:0 0 10px ${pc};animation:pulse 2s infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-    
-    h1{font-family:'Space Grotesk',sans-serif;font-size:4rem;font-weight:900;line-height:1.05;margin-bottom:24px}
-    h1 .gradient{background:linear-gradient(135deg,${pc},${ac});-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    h1 .white{color:#fff;-webkit-text-fill-color:#fff}
-    
-    .hero-desc{font-size:1.05rem;line-height:1.8;color:rgba(255,255,255,0.6);max-width:480px;margin-bottom:10px}
-    .hero-subdesc{font-size:0.85rem;line-height:1.7;color:rgba(255,255,255,0.4);max-width:440px;margin-bottom:36px}
-
-    .btn-group{display:flex;gap:16px;flex-wrap:wrap}
-    .cta-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;background:linear-gradient(135deg,${pc},${ac});color:#070d1a;font-weight:700;font-size:0.95rem;border:none;border-radius:14px;cursor:pointer;text-decoration:none;transition:all .3s;box-shadow:0 0 40px ${hexToRgba(pc, 0.3)},0 8px 32px rgba(0,0,0,0.3);letter-spacing:0.5px}
-    .cta-btn:hover{transform:translateY(-3px);box-shadow:0 0 60px ${hexToRgba(pc, 0.5)},0 12px 40px rgba(0,0,0,0.4)}
-    .cta-btn svg{width:18px;height:18px}
-    .secondary-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;background:transparent;color:#fff;font-weight:600;font-size:0.95rem;border:1px solid rgba(255,255,255,0.15);border-radius:14px;cursor:pointer;text-decoration:none;transition:all .3s;backdrop-filter:blur(10px)}
-    .secondary-btn:hover{border-color:${pc};background:${hexToRgba(pc, 0.05)};transform:translateY(-2px)}
-
-    /* ===== HERO IMAGE ===== */
-    .hero-right{position:relative;display:flex;justify-content:center;align-items:center}
-    .hero-image-wrap{position:relative;width:100%;max-width:560px;aspect-ratio:4/5;margin:0 auto}
-    .hero-image-glow{position:absolute;inset:-40px;background:radial-gradient(circle,${hexToRgba(pc, 0.2)} 0%,${hexToRgba(ac, 0.1)} 40%,transparent 70%);border-radius:50%;filter:blur(60px);animation:glowPulse 4s ease-in-out infinite}
-    @keyframes glowPulse{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
-    
-    .hero-img{width:100%;height:100%;object-fit:cover;border-radius:24px;position:relative;z-index:3;box-shadow:0 30px 80px rgba(0,0,0,0.5)}
-    .hero-placeholder{width:100%;height:100%;background:linear-gradient(135deg,${hexToRgba(pc, 0.2)},${hexToRgba(ac, 0.2)});border-radius:24px;display:flex;align-items:center;justify-content:center;position:relative;z-index:3;border:1px solid rgba(255,255,255,0.1)}
-    .hero-placeholder span{font-size:6rem;font-weight:900;color:${pc};opacity:0.3}
-
-    /* Geometric frame behind hero */
-    .geometric-frame{position:absolute;top:50%;left:50%;width:85%;height:85%;transform:translate(-50%,-50%) rotate(5deg);border:2px solid ${hexToRgba(ac, 0.15)};border-radius:30px;z-index:2;animation:frameRotate 20s linear infinite}
-    @keyframes frameRotate{0%{transform:translate(-50%,-50%) rotate(5deg)}100%{transform:translate(-50%,-50%) rotate(365deg)}}
-
-    /* Floating 3D objects */
-    .floating-obj{position:absolute;z-index:4;border-radius:50%;animation:float 6s ease-in-out infinite}
-    .obj-1{width:60px;height:60px;top:-20px;right:10%;background:linear-gradient(135deg,${pc},transparent);border:2px solid ${hexToRgba(pc, 0.4)};animation-delay:0s;box-shadow:0 0 30px ${hexToRgba(pc, 0.3)}}
-    .obj-2{width:40px;height:40px;bottom:15%;left:-15px;background:${hexToRgba(ac, 0.2)};border:2px solid ${hexToRgba(ac, 0.5)};animation-delay:1s;border-radius:12px;transform:rotate(45deg);box-shadow:0 0 25px ${hexToRgba(ac, 0.3)}}
-    .obj-3{width:20px;height:20px;top:30%;right:-10px;background:${ac};animation-delay:2s;box-shadow:0 0 20px ${ac}}
-    .obj-4{width:50px;height:50px;bottom:-10px;right:25%;border:2px solid ${hexToRgba(pc, 0.3)};background:transparent;animation-delay:1.5s;border-radius:14px}
-    .obj-5{width:14px;height:14px;top:20%;left:5%;background:${hexToRgba(ac, 0.6)};animation-delay:3s;box-shadow:0 0 15px ${hexToRgba(ac, 0.4)}}
-    @keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-20px) rotate(10deg)}}
-
-    /* ===== STATS ===== */
-    .stats-section{position:relative;z-index:1;padding:80px 60px;border-top:1px solid rgba(255,255,255,0.04)}
-    .stats-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:30px;max-width:1200px;margin:0 auto}
-    .stat-card{position:relative;text-align:center;padding:40px 50px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:20px;backdrop-filter:blur(10px);overflow:hidden;transition:all .3s}
-    .stat-card:hover{border-color:${hexToRgba(pc, 0.3)};transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,0.3)}
-    .stat-number{font-family:'Space Grotesk',sans-serif;font-size:3rem;font-weight:800;background:linear-gradient(135deg,${pc},${ac});-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .stat-label{font-size:0.85rem;color:rgba(255,255,255,0.5);margin-top:8px;font-weight:500;letter-spacing:1px;text-transform:uppercase}
-    .stat-glow{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);width:100px;height:40px;background:${hexToRgba(pc, 0.15)};filter:blur(30px);border-radius:50%}
-
-    /* ===== FEATURES ===== */
-    .features-section{position:relative;z-index:1;padding:100px 60px}
-    .section-header{text-align:center;margin-bottom:60px}
-    .section-tag{display:inline-block;padding:6px 18px;background:${hexToRgba(ac, 0.1)};border:1px solid ${hexToRgba(ac, 0.2)};border-radius:50px;font-size:0.75rem;font-weight:600;color:${ac};letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px}
-    .section-title{font-family:'Space Grotesk',sans-serif;font-size:2.5rem;font-weight:800;color:#fff}
-    .section-title .accent{color:${pc}}
-    .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1200px;margin:0 auto}
-    .feature-card{padding:36px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:20px;transition:all .4s;position:relative;overflow:hidden}
-    .feature-card:hover{border-color:${hexToRgba(pc, 0.3)};transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,0.3)}
-    .feature-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,${pc},${ac},transparent);opacity:0;transition:opacity .4s}
-    .feature-card:hover::after{opacity:1}
-    .feature-icon{width:52px;height:52px;background:linear-gradient(135deg,${hexToRgba(pc, 0.15)},${hexToRgba(ac, 0.1)});border:1px solid ${hexToRgba(pc, 0.2)};border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:20px}
-    .feature-card h3{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;color:#fff;margin-bottom:10px}
-    .feature-card p{font-size:0.875rem;color:rgba(255,255,255,0.5);line-height:1.7}
-
-    /* ===== ABOUT ===== */
-    .about-section{position:relative;z-index:1;padding:100px 60px}
-    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;max-width:1200px;margin:0 auto}
-    .about-visual{position:relative;height:400px;background:linear-gradient(135deg,${hexToRgba(pc, 0.08)},${hexToRgba(ac, 0.05)});border-radius:24px;border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .about-visual::before{content:'';position:absolute;width:200px;height:200px;background:${hexToRgba(pc, 0.15)};border-radius:50%;filter:blur(60px)}
-    .about-visual-text{font-family:'Space Grotesk',sans-serif;font-size:3rem;font-weight:900;color:${hexToRgba(pc, 0.2)};position:relative;z-index:1}
-    .about-content h2{font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:800;margin-bottom:20px}
-    .about-content h2 .accent{color:${pc}}
-    .about-content p{color:rgba(255,255,255,0.6);line-height:1.8;margin-bottom:16px;font-size:0.95rem}
-    .about-list{list-style:none;margin-top:24px}
-    .about-list li{display:flex;align-items:center;gap:12px;padding:10px 0;color:rgba(255,255,255,0.7);font-size:0.9rem}
-    .about-list li::before{content:'✦';color:${ac};font-size:0.8rem}
-
-    /* ===== TESTIMONIAL ===== */
-    .testimonial-section{position:relative;z-index:1;padding:100px 60px;display:flex;justify-content:center}
-    .testimonial-card{max-width:700px;text-align:center;padding:50px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:24px;position:relative;backdrop-filter:blur(10px)}
-    .quote-icon{font-size:4rem;color:${hexToRgba(pc, 0.3)};line-height:1;margin-bottom:16px}
-    .quote-text{font-size:1.2rem;font-style:italic;color:rgba(255,255,255,0.8);line-height:1.9}
-    .quote-author{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:24px;font-weight:600;color:${ac}}
-    .author-avatar{width:40px;height:40px;background:linear-gradient(135deg,${pc},${ac});border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#070d1a;font-size:1rem}
-
-    /* ===== CTA SECTION ===== */
-    .cta-section{position:relative;z-index:1;padding:100px 60px;text-align:center}
-    .cta-section .cta-box{max-width:800px;margin:0 auto;padding:60px;background:linear-gradient(135deg,${hexToRgba(pc, 0.08)},${hexToRgba(ac, 0.05)});border:1px solid ${hexToRgba(pc, 0.15)};border-radius:28px;position:relative;overflow:hidden}
-    .cta-box::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,${hexToRgba(pc, 0.05)} 0%,transparent 50%);animation:rotateBg 15s linear infinite}
-    @keyframes rotateBg{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-    .cta-section h2{font-family:'Space Grotesk',sans-serif;font-size:2.5rem;font-weight:800;color:#fff;margin-bottom:16px;position:relative;z-index:1}
-    .cta-section p{color:rgba(255,255,255,0.6);margin-bottom:32px;position:relative;z-index:1;font-size:1rem}
-
-    /* ===== FOOTER ===== */
-    footer{position:relative;z-index:1;padding:50px 60px 30px;border-top:1px solid rgba(255,255,255,0.04)}
-    .footer-inner{display:flex;justify-content:space-between;align-items:center;max-width:1200px;margin:0 auto}
-    .footer-brand{display:flex;align-items:center;gap:10px}
-    .footer-links{display:flex;gap:24px}
-    .footer-links a{color:rgba(255,255,255,0.4);text-decoration:none;font-size:0.85rem;transition:color .3s}
-    .footer-links a:hover{color:${pc}}
-    .footer-copy{text-align:center;margin-top:30px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.04);color:rgba(255,255,255,0.3);font-size:0.8rem}
-
-    /* ===== RESPONSIVE ===== */
-    @media(max-width:1024px){
-      .hero-content{grid-template-columns:1fr;text-align:center}
-      .hero-left{display:flex;flex-direction:column;align-items:center}
-      .hero-desc,.hero-subdesc{text-align:center}
-      .btn-group{justify-content:center}
-      .hero-image-wrap{max-width:400px}
-      .features-grid{grid-template-columns:repeat(2,1fr)}
-      .about-grid{grid-template-columns:1fr}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      color: #eef4ff;
+      background:
+        linear-gradient(135deg, rgba(4, 10, 24, 0.92), rgba(7, 12, 28, 0.9)),
+        url('${templateImageUrl}') center top / cover no-repeat fixed;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
     }
-    @media(max-width:768px){
-      nav{padding:16px 24px;flex-direction:column;gap:16px}
-      .hero{padding:60px 24px}
-      h1{font-size:2.5rem!important}
-      .features-grid{grid-template-columns:1fr}
-      .stats-section,.features-section,.about-section,.cta-section{padding:60px 24px}
-      footer{padding:40px 24px 20px}
-      .footer-inner{flex-direction:column;gap:20px}
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, ${hexToRgba(primaryColor, 0.20)}, transparent 30%),
+        radial-gradient(circle at 80% 18%, ${hexToRgba(accentColor, 0.18)}, transparent 24%),
+        radial-gradient(circle at 50% 80%, ${hexToRgba(primaryColor, 0.14)}, transparent 26%);
+      pointer-events: none;
+      z-index: 0;
     }
-    @media(max-width:480px){
-      h1{font-size:2rem!important}
-      .btn-group{flex-direction:column;width:100%}
-      .cta-btn,.secondary-btn{width:100%;justify-content:center}
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(${hexToRgba(primaryColor, 0.08)} 1px, transparent 1px),
+        linear-gradient(90deg, ${hexToRgba(primaryColor, 0.08)} 1px, transparent 1px);
+      background-size: 58px 58px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.75), transparent 92%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell {
+      position: relative;
+      z-index: 1;
+      backdrop-filter: blur(2px);
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      padding: 22px 48px;
+      background: rgba(7, 12, 28, 0.62);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      backdrop-filter: blur(18px);
+    }
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .logo-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, ${primaryColor}, ${accentColor});
+      box-shadow: 0 0 30px ${hexToRgba(primaryColor, 0.40)};
+      flex-shrink: 0;
+    }
+    .logo-badge img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: white;
+      white-space: nowrap;
+    }
+    .menu {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+    }
+    .nav-link {
+      color: rgba(228, 238, 255, 0.76);
+      text-decoration: none;
+      padding: 10px 16px;
+      font-size: 0.82rem;
+      letter-spacing: 1.2px;
+      font-weight: 600;
+      border-radius: 999px;
+      transition: 0.25s ease;
+    }
+    .nav-link:hover {
+      color: white;
+      background: ${hexToRgba(primaryColor, 0.14)};
+      box-shadow: inset 0 0 0 1px ${hexToRgba(primaryColor, 0.18)};
+    }
+    .hero {
+      min-height: calc(100vh - 85px);
+      padding: 48px 48px 36px;
+      display: grid;
+      align-items: center;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(460px, 620px);
+      gap: 56px;
+      align-items: center;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: ${hexToRgba(primaryColor, 0.12)};
+      box-shadow: inset 0 0 0 1px ${hexToRgba(primaryColor, 0.22)};
+      color: ${accentColor};
+      font-size: 0.78rem;
+      letter-spacing: 1.4px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+    .eyebrow::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: ${primaryColor};
+      box-shadow: 0 0 18px ${hexToRgba(primaryColor, 0.9)};
+    }
+    .hero-copy h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(3rem, 6vw, 5.6rem);
+      line-height: 0.98;
+      margin-bottom: 22px;
+      text-wrap: balance;
+    }
+    .hero-copy h1 .gradient {
+      background: linear-gradient(135deg, white 10%, ${accentColor} 48%, ${primaryColor} 96%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-copy h1 .plain {
+      color: white;
+      display: block;
+      text-shadow: 0 0 30px rgba(255,255,255,0.12);
+    }
+    .hero-copy p {
+      max-width: 600px;
+      font-size: 1.06rem;
+      line-height: 1.9;
+      color: rgba(226, 236, 255, 0.72);
+      margin-bottom: 34px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .btn {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      min-width: 170px;
+      padding: 15px 24px;
+      border-radius: 16px;
+      text-decoration: none;
+      font-weight: 700;
+      transition: 0.25s ease;
+    }
+    .btn-primary {
+      color: #08101f;
+      background: linear-gradient(135deg, ${accentColor}, ${primaryColor});
+      box-shadow: 0 16px 40px ${hexToRgba(primaryColor, 0.22)};
+    }
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-secondary {
+      color: white;
+      background: rgba(255,255,255,0.04);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.09);
+      backdrop-filter: blur(12px);
+    }
+    .hero-visual {
+      position: relative;
+      min-height: 720px;
+      display: grid;
+      place-items: center;
+    }
+    .visual-glow,
+    .visual-glow-2 {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(55px);
+      pointer-events: none;
+    }
+    .visual-glow {
+      width: 290px;
+      height: 290px;
+      left: 6%;
+      top: 18%;
+      background: ${hexToRgba(primaryColor, 0.35)};
+    }
+    .visual-glow-2 {
+      width: 240px;
+      height: 240px;
+      right: 12%;
+      bottom: 16%;
+      background: ${hexToRgba(accentColor, 0.24)};
+    }
+    .showcase {
+      position: relative;
+      width: 100%;
+      max-width: 560px;
+      min-height: 680px;
+      border-radius: 34px;
+      padding: 22px;
+      background: rgba(5, 10, 22, 0.48);
+      box-shadow:
+        0 40px 100px rgba(0,0,0,0.48),
+        inset 0 0 0 1px rgba(255,255,255,0.06);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .showcase::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, ${hexToRgba(primaryColor, 0.16)}, transparent 45%, ${hexToRgba(accentColor, 0.10)} 100%);
+      z-index: -1;
+    }
+    .template-preview {
+      width: 100%;
+      height: 100%;
+      min-height: 636px;
+      object-fit: contain;
+      object-position: center top;
+      border-radius: 26px;
+      background: rgba(2, 6, 16, 0.85);
+      box-shadow: 0 22px 80px rgba(0,0,0,0.45);
+    }
+    .floating-card,
+    .floating-ring,
+    .floating-cube,
+    .floating-pill {
+      position: absolute;
+      backdrop-filter: blur(10px);
+    }
+    .floating-card {
+      left: -8px;
+      bottom: 70px;
+      width: 210px;
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(8, 16, 34, 0.72);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 20px 50px rgba(0,0,0,0.30);
+    }
+    .floating-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.92rem;
+      color: white;
+    }
+    .floating-card span {
+      display: block;
+      color: rgba(226,236,255,0.70);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+    .floating-ring {
+      top: 56px;
+      right: 18px;
+      width: 94px;
+      height: 94px;
+      border-radius: 999px;
+      border: 10px solid ${hexToRgba(accentColor, 0.78)};
+      box-shadow: 0 0 0 12px ${hexToRgba(primaryColor, 0.09)}, 0 0 42px ${hexToRgba(accentColor, 0.22)};
+      transform: rotate(28deg);
+    }
+    .floating-cube {
+      width: 96px;
+      height: 96px;
+      right: -8px;
+      top: 220px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, ${hexToRgba(primaryColor, 0.32)}, ${hexToRgba(accentColor, 0.18)});
+      box-shadow: inset 0 0 0 2px ${hexToRgba(accentColor, 0.22)};
+      transform: rotate(24deg);
+    }
+    .floating-pill {
+      width: 168px;
+      right: 8px;
+      bottom: 18px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: rgba(8, 16, 34, 0.76);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+      color: ${accentColor};
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .uploaded-hero {
+      position: absolute;
+      right: 54px;
+      bottom: 110px;
+      width: 180px;
+      height: 180px;
+      border-radius: 28px;
+      object-fit: cover;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.42), inset 0 0 0 3px ${hexToRgba(accentColor, 0.36)};
+      border: 4px solid ${hexToRgba(primaryColor, 0.38)};
+      background: rgba(8, 16, 34, 0.82);
+    }
+    .stats-wrap,
+    .content-section,
+    .cta-section,
+    .testimonial-section,
+    .footer {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding-left: 48px;
+      padding-right: 48px;
+    }
+    .stats-wrap {
+      margin-top: -12px;
+      padding-bottom: 44px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .stat-card {
+      padding: 26px 22px;
+      border-radius: 24px;
+      background: rgba(8, 14, 30, 0.62);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      backdrop-filter: blur(14px);
+    }
+    .stat-number {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(135deg, ${accentColor}, ${primaryColor});
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .stat-label {
+      margin-top: 10px;
+      color: rgba(226,236,255,0.62);
+      font-size: 0.9rem;
+      letter-spacing: 0.5px;
+    }
+    .content-section {
+      padding-top: 36px;
+      padding-bottom: 34px;
+    }
+    .section-header {
+      max-width: 680px;
+      margin-bottom: 28px;
+    }
+    .section-label {
+      display: inline-block;
+      margin-bottom: 16px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: ${accentColor};
+      background: ${hexToRgba(accentColor, 0.10)};
+      box-shadow: inset 0 0 0 1px ${hexToRgba(accentColor, 0.18)};
+    }
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2rem, 3.4vw, 3rem);
+      line-height: 1.08;
+      margin-bottom: 14px;
+    }
+    .section-title em {
+      color: ${primaryColor};
+      font-style: normal;
+    }
+    .section-desc {
+      color: rgba(226,236,255,0.68);
+      line-height: 1.9;
+      font-size: 1rem;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .feature-card {
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(8, 14, 30, 0.58);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px);
+    }
+    .feature-icon {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 18px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, ${hexToRgba(primaryColor, 0.22)}, ${hexToRgba(accentColor, 0.16)});
+      box-shadow: inset 0 0 0 1px ${hexToRgba(primaryColor, 0.16)};
+      font-size: 1.35rem;
+    }
+    .feature-card h3 {
+      font-size: 1.04rem;
+      margin-bottom: 10px;
+      color: white;
+    }
+    .feature-card p {
+      color: rgba(226,236,255,0.64);
+      line-height: 1.75;
+      font-size: 0.92rem;
+    }
+    .about-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+    .about-panel,
+    .about-art {
+      border-radius: 30px;
+      background: rgba(8, 14, 30, 0.58);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+    .about-panel {
+      padding: 34px;
+    }
+    .about-panel p {
+      color: rgba(226,236,255,0.68);
+      line-height: 1.9;
+      margin-bottom: 14px;
+    }
+    .about-list {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .about-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(235,242,255,0.76);
+    }
+    .about-list li::before {
+      content: '✦';
+      color: ${accentColor};
+      font-size: 0.9rem;
+    }
+    .about-art {
+      position: relative;
+      min-height: 360px;
+      background:
+        linear-gradient(145deg, ${hexToRgba(primaryColor, 0.12)}, transparent 45%),
+        linear-gradient(320deg, ${hexToRgba(accentColor, 0.14)}, rgba(8, 14, 30, 0.30));
+    }
+    .about-art img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.92;
+    }
+    .about-art .art-fallback {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      color: ${hexToRgba(primaryColor, 0.74)};
+      letter-spacing: 1px;
+    }
+    .testimonial-section {
+      padding-top: 34px;
+      padding-bottom: 18px;
+    }
+    .testimonial-card {
+      padding: 38px 32px;
+      border-radius: 30px;
+      background: rgba(8, 14, 30, 0.62);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      backdrop-filter: blur(14px);
+      text-align: center;
+    }
+    .quote-mark {
+      font-size: 4rem;
+      line-height: 1;
+      color: ${hexToRgba(primaryColor, 0.34)};
+      margin-bottom: 10px;
+    }
+    .testimonial-copy {
+      font-size: 1.16rem;
+      line-height: 1.95;
+      color: rgba(240,245,255,0.82);
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .testimonial-author {
+      margin-top: 20px;
+      font-weight: 700;
+      color: ${accentColor};
+    }
+    .cta-section {
+      padding-top: 32px;
+      padding-bottom: 38px;
+    }
+    .cta-box {
+      padding: 38px 28px;
+      border-radius: 32px;
+      text-align: center;
+      background:
+        linear-gradient(135deg, ${hexToRgba(primaryColor, 0.16)}, ${hexToRgba(accentColor, 0.10)}),
+        rgba(8, 14, 30, 0.64);
+      box-shadow: inset 0 0 0 1px ${hexToRgba(primaryColor, 0.14)};
+      backdrop-filter: blur(14px);
+    }
+    .cta-box h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2rem, 3.2vw, 3rem);
+      margin-bottom: 10px;
+    }
+    .cta-box p {
+      color: rgba(226,236,255,0.70);
+      margin-bottom: 22px;
+      line-height: 1.85;
+    }
+    .footer {
+      padding-top: 26px;
+      padding-bottom: 32px;
+    }
+    .footer-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 22px 24px;
+      border-radius: 26px;
+      background: rgba(8, 14, 30, 0.58);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      backdrop-filter: blur(14px);
+    }
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .footer-links a {
+      color: rgba(226,236,255,0.60);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .footer-links a:hover { color: white; }
+    .copyright {
+      text-align: center;
+      margin-top: 14px;
+      color: rgba(226,236,255,0.42);
+      font-size: 0.86rem;
+    }
+    @media (max-width: 1160px) {
+      .hero-grid,
+      .about-grid,
+      .feature-grid,
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-copy {
+        text-align: center;
+      }
+      .hero-copy p,
+      .section-header {
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .actions { justify-content: center; }
+      .hero-visual { min-height: unset; }
+    }
+    @media (max-width: 768px) {
+      .topbar,
+      .hero,
+      .stats-wrap,
+      .content-section,
+      .cta-section,
+      .testimonial-section,
+      .footer {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      .topbar {
+        padding-top: 18px;
+        padding-bottom: 18px;
+        flex-direction: column;
+      }
+      .menu { gap: 2px; }
+      .hero { padding-top: 28px; }
+      .showcase {
+        min-height: 500px;
+        padding: 14px;
+      }
+      .template-preview { min-height: 470px; }
+      .uploaded-hero {
+        width: 120px;
+        height: 120px;
+        right: 26px;
+        bottom: 78px;
+      }
+      .floating-card {
+        width: 160px;
+        left: 10px;
+        bottom: 58px;
+      }
+      .floating-ring {
+        width: 68px;
+        height: 68px;
+      }
+      .floating-cube {
+        width: 70px;
+        height: 70px;
+        top: 170px;
+      }
+      .hero-grid,
+      .about-grid,
+      .feature-grid,
+      .stats-grid,
+      .footer-card {
+        grid-template-columns: 1fr;
+      }
+      .footer-card {
+        display: grid;
+        justify-items: center;
+        text-align: center;
+      }
     }
   </style>
 </head>
 <body>
-  <!-- Particles -->
-  <div class="particles">
-    <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
-    <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
-  </div>
+  <div class="shell">
+    <nav class="topbar">
+      <div class="logo-wrap">
+        <div class="logo-badge">${logoImageUrl ? `<img src="${logoImageUrl}" alt="${brandName} logo" />` : brandName.charAt(0)}</div>
+        <span class="logo-text">${brandName}</span>
+      </div>
+      <div class="menu">${finalMenu}</div>
+    </nav>
 
-  <!-- NAV -->
-  <nav>
-    ${logoImg}
-    <div class="nav-links">${defaultMenu}</div>
-  </nav>
+    <section class="hero" id="hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow">${themeStyle}</div>
+          <h1>
+            <span class="gradient">${firstLine}</span>
+            ${secondLine ? `<span class="plain">${secondLine}</span>` : ""}
+          </h1>
+          <p>${subheadline}</p>
+          <div class="actions">
+            <a href="#contact" class="btn btn-primary">${ctaText}</a>
+            <a href="#features" class="btn btn-secondary">See Full Experience</a>
+          </div>
+        </div>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-content">
-      <div class="hero-left">
-        <div class="hero-badge">✨ ${data.themeStyle || 'Premium Template'}</div>
-        <h1>
-          <span class="gradient">${data.headline.split(' ').slice(0, Math.ceil(data.headline.split(' ').length / 2)).join(' ')}</span><br/>
-          <span class="white">${data.headline.split(' ').slice(Math.ceil(data.headline.split(' ').length / 2)).join(' ')}</span>
-        </h1>
-        <p class="hero-desc">${data.subheadline}</p>
-        <p class="hero-subdesc">Premium designs crafted for modern brands. Fully customizable, lightning-fast, and built to convert visitors into customers.</p>
-        <div class="btn-group">
-          <a href="#" class="cta-btn">${data.ctaText || 'GET STARTED'}</a>
-          <a href="#about" class="secondary-btn">Know More →</a>
+        <div class="hero-visual">
+          <div class="visual-glow"></div>
+          <div class="visual-glow-2"></div>
+          <div class="showcase">
+            <img src="${templateImageUrl}" alt="${themeStyle} template preview" class="template-preview" />
+            <div class="floating-ring"></div>
+            <div class="floating-cube"></div>
+            <div class="floating-card">
+              <strong>${brandName}</strong>
+              <span>${subheadline}</span>
+            </div>
+            <div class="floating-pill">Premium • Interactive • Responsive</div>
+            ${heroImageUrl ? `<img src="${heroImageUrl}" alt="${brandName} hero" class="uploaded-hero" />` : ""}
+          </div>
         </div>
       </div>
-      <div class="hero-right">
-        ${heroImg}
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- STATS -->
-  ${statsHTML ? `
-  <section class="stats-section">
-    <div class="stats-grid">${statsHTML}</div>
-  </section>` : `
-  <section class="stats-section">
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-number">50K+</div><div class="stat-label">Users Worldwide</div><div class="stat-glow"></div></div>
-      <div class="stat-card"><div class="stat-number">4.98</div><div class="stat-label">Average Rating</div><div class="stat-glow"></div></div>
-      <div class="stat-card"><div class="stat-number">99%</div><div class="stat-label">Satisfaction</div><div class="stat-glow"></div></div>
-      <div class="stat-card"><div class="stat-number">24/7</div><div class="stat-label">Support</div><div class="stat-glow"></div></div>
-    </div>
-  </section>`}
+    <section class="stats-wrap">
+      <div class="stats-grid">${finalStats}</div>
+    </section>
 
-  <!-- FEATURES -->
-  <section class="features-section" id="features">
-    <div class="section-header">
-      <div class="section-tag">What We Offer</div>
-      <h2 class="section-title">Why Choose <span class="accent">${data.businessName}</span></h2>
-    </div>
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">⚡</div>
-        <h3>Lightning Fast</h3>
-        <p>Optimized for speed with instant loading times and smooth performance across all devices.</p>
+    <section class="content-section" id="features">
+      <div class="section-header">
+        <span class="section-label">Premium Features</span>
+        <h2 class="section-title">See the full <em>${brandName}</em> experience with background, artwork, and branded changes</h2>
+        <p class="section-desc">Your selected template stays visible, the premium background remains intact, and your headline, CTA, logo, colors, and uploaded image all appear together in one polished preview.</p>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">🎨</div>
-        <h3>Fully Customizable</h3>
-        <p>Every element is tailored to your brand — colors, fonts, images, and layouts.</p>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <div class="feature-icon">🎨</div>
+          <h3>Original Template Artwork</h3>
+          <p>The chosen template screenshot stays inside the live preview so the premium visuals and objects remain fully visible.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">🌌</div>
+          <h3>Full Background Styling</h3>
+          <p>Neon glows, deep dark overlays, grid texture, and layered gradients keep the page looking rich instead of flat.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">🖼️</div>
+          <h3>Image-Driven Composition</h3>
+          <p>Your uploaded hero image sits on top of the premium template composition for a stronger branded presentation.</p>
+        </article>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">📱</div>
-        <h3>Mobile Responsive</h3>
-        <p>Looks stunning on every screen size, from desktop monitors to mobile phones.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔒</div>
-        <h3>Secure & Reliable</h3>
-        <p>Built with enterprise-grade security and 99.9% uptime guarantee.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🚀</div>
-        <h3>SEO Optimized</h3>
-        <p>Rank higher on search engines with built-in SEO best practices and meta tags.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">💎</div>
-        <h3>Premium Quality</h3>
-        <p>Professional designs that make your brand stand out from the competition.</p>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ABOUT -->
-  <section class="about-section" id="about">
-    <div class="about-grid">
-      <div class="about-visual">
-        <span class="about-visual-text">${data.businessName}</span>
+    <section class="content-section" id="about">
+      <div class="about-grid">
+        <div class="about-panel">
+          <span class="section-label">About ${brandName}</span>
+          <h2 class="section-title">A premium landing page look built around your <em>custom details</em></h2>
+          <p>${subheadline}</p>
+          <p>This preview is designed to show your brand changes without hiding the original premium layout style, visuals, or object-rich composition.</p>
+          <ul class="about-list">
+            <li>Selected template artwork stays visible</li>
+            <li>Background and glow effects remain on preview</li>
+            <li>Customized headline, CTA, and brand identity update instantly</li>
+            <li>JPEG and PNG downloads capture the full styled page</li>
+          </ul>
+        </div>
+        <div class="about-art">
+          ${heroImageUrl ? `<img src="${heroImageUrl}" alt="${brandName} visual" />` : `<div class="art-fallback">${brandName}</div>`}
+        </div>
       </div>
-      <div class="about-content">
-        <h2>About <span class="accent">${data.businessName}</span></h2>
-        <p>${data.subheadline}</p>
-        <p>We believe in creating exceptional digital experiences that drive real results. Our designs combine cutting-edge aesthetics with proven conversion strategies.</p>
-        <ul class="about-list">
-          <li>Premium hand-crafted design</li>
-          <li>Conversion-optimized layouts</li>
-          <li>24/7 dedicated support</li>
-          <li>Regular updates & improvements</li>
-        </ul>
+    </section>
+
+    ${testimonialHTML}
+
+    <section class="cta-section" id="contact">
+      <div class="cta-box">
+        <h2>Ready to launch ${brandName}?</h2>
+        <p>Use this premium preview to review every visual layer before downloading your branded template image.</p>
+        <a href="#hero" class="btn btn-primary">${ctaText}</a>
       </div>
-    </div>
-  </section>
+    </section>
 
-  ${testimonialHTML}
-
-  <!-- CTA -->
-  <section class="cta-section" id="contact">
-    <div class="cta-box">
-      <h2>Ready to Get Started?</h2>
-      <p>Join thousands of satisfied customers who trust ${data.businessName} for their digital presence.</p>
-      <a href="#" class="cta-btn">${data.ctaText || 'GET STARTED'} →</a>
-    </div>
-  </section>
-
-  <!-- FOOTER -->
-  <footer>
-    <div class="footer-inner">
-      ${logoImg}
-      <div class="footer-links">
-        <a href="#">Home</a>
-        <a href="#about">About</a>
-        <a href="#features">Features</a>
-        <a href="#contact">Contact</a>
+    <footer class="footer">
+      <div class="footer-card">
+        <div class="logo-wrap">
+          <div class="logo-badge">${logoImageUrl ? `<img src="${logoImageUrl}" alt="${brandName} logo" />` : brandName.charAt(0)}</div>
+          <span class="logo-text">${brandName}</span>
+        </div>
+        <div class="footer-links">
+          <a href="#hero">Home</a>
+          <a href="#about">About</a>
+          <a href="#features">Features</a>
+          <a href="#contact">Contact</a>
+        </div>
       </div>
-    </div>
-    <div class="footer-copy">© ${new Date().getFullYear()} ${data.businessName} — Built with LandingForge ❤️</div>
-  </footer>
+      <div class="copyright">© ${new Date().getFullYear()} ${brandName} — Built with LandingForge ❤️</div>
+    </footer>
+  </div>
 </body>
 </html>`;
 }
@@ -417,7 +983,7 @@ export function downloadHTML(html: string, filename: string) {
 export function previewHTML(html: string) {
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
-  window.open(url, "_blank");
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export async function downloadAsImage(html: string, filename: string, format: "jpeg" | "png") {
@@ -428,8 +994,9 @@ export async function downloadAsImage(html: string, filename: string, format: "j
   iframe.style.left = "-9999px";
   iframe.style.top = "0";
   iframe.style.width = "1440px";
-  iframe.style.height = "900px";
+  iframe.style.height = "1600px";
   iframe.style.border = "none";
+  iframe.setAttribute("aria-hidden", "true");
   document.body.appendChild(iframe);
 
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -442,20 +1009,29 @@ export async function downloadAsImage(html: string, filename: string, format: "j
   iframeDoc.write(html);
   iframeDoc.close();
 
-  await new Promise((r) => setTimeout(r, 2000));
+  await prepareIframeDocument(iframeDoc);
 
-  const fullHeight = iframeDoc.documentElement.scrollHeight;
-  iframe.style.height = fullHeight + "px";
+  const fullHeight = Math.max(
+    iframeDoc.body.scrollHeight,
+    iframeDoc.documentElement.scrollHeight,
+    iframeDoc.body.offsetHeight,
+    iframeDoc.documentElement.offsetHeight,
+  );
 
-  await new Promise((r) => setTimeout(r, 500));
+  iframe.style.height = `${fullHeight}px`;
+  await prepareIframeDocument(iframeDoc);
 
-  const canvas = await html2canvas(iframeDoc.body, {
+  const canvas = await html2canvas(iframeDoc.documentElement, {
     width: 1440,
     height: fullHeight,
+    windowWidth: 1440,
+    windowHeight: fullHeight,
     useCORS: true,
     allowTaint: true,
     backgroundColor: "#070d1a",
     scale: 2,
+    scrollX: 0,
+    scrollY: 0,
   });
 
   document.body.removeChild(iframe);
