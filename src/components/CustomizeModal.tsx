@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import { X, Plus, Trash2, Download, Eye, Save } from "lucide-react";
+import { X, Plus, Trash2, Download, Eye, ImageIcon } from "lucide-react";
 import { templates } from "@/data/templates";
-import { generateHTML, downloadHTML, previewHTML, fileToDataUrl } from "@/lib/generateTemplate";
+import { generateHTML, previewHTML, fileToDataUrl, downloadAsImage } from "@/lib/generateTemplate";
 import { toast } from "sonner";
 
 interface Props {
