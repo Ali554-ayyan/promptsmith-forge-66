@@ -93,8 +93,7 @@ async function prepareIframeDocument(doc: Document) {
 
   if ("fonts" in doc) {
     try {
-      // @ts-expect-error browser fonts API exists in runtime
-      await doc.fonts.ready;
+      await (doc as Document & { fonts?: FontFaceSet }).fonts?.ready;
     } catch {
       // ignore font readiness failures
     }
