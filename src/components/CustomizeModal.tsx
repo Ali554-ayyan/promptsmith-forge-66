@@ -189,11 +189,11 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
           <button onClick={handlePreview} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm neon-glow-cyan hover:opacity-90 transition-all">
             <Eye size={16} /> Preview Live
           </button>
-          <button onClick={handleExport} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm neon-glow-purple hover:opacity-90 transition-all">
-            <Download size={16} /> Export HTML
+          <button onClick={() => handleDownloadImage("jpeg")} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm neon-glow-purple hover:opacity-90 transition-all">
+            <Download size={16} /> Download JPEG
           </button>
-          <button onClick={handleSave} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold text-sm neon-glow-gold hover:opacity-90 transition-all">
-            <Save size={16} /> Save Template
+          <button onClick={() => handleDownloadImage("png")} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold text-sm neon-glow-gold hover:opacity-90 transition-all">
+            <ImageIcon size={16} /> Download PNG
           </button>
         </div>
       </div>
