@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import { X, Plus, Trash2, Download, Eye, Save } from "lucide-react";
+import { X, Plus, Trash2, Download, Eye, ImageIcon } from "lucide-react";
 import { templates } from "@/data/templates";
-import { generateHTML, downloadHTML, previewHTML, fileToDataUrl } from "@/lib/generateTemplate";
+import { generateHTML, previewHTML, fileToDataUrl, downloadAsImage } from "@/lib/generateTemplate";
 import { toast } from "sonner";
 
 interface Props {
@@ -63,16 +63,13 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
     toast.success("Preview opened in a new tab!");
   };
 
-  const handleExport = async () => {
+  const handleDownloadImage = async (format: "jpeg" | "png") => {
     const data = await getTemplateData();
     const html = generateHTML(data);
-    const filename = `${(businessName || "landing-page").toLowerCase().replace(/\s+/g, "-")}.html`;
-    downloadHTML(html, filename);
-    toast.success("HTML file downloaded!");
-  };
-
-  const handleSave = () => {
-    toast.success("Template saved successfully!");
+    const filename = `${(businessName || "landing-page").toLowerCase().replace(/\s+/g, "-")}.${format}`;
+    toast.info("Rendering full template… please wait.");
+    await downloadAsImage(html, filename, format);
+    toast.success(`${format.toUpperCase()} downloaded!`);
   };
 
   return (
@@ -192,11 +189,11 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
           <button onClick={handlePreview} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm neon-glow-cyan hover:opacity-90 transition-all">
             <Eye size={16} /> Preview Live
           </button>
-          <button onClick={handleExport} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm neon-glow-purple hover:opacity-90 transition-all">
-            <Download size={16} /> Export HTML
+          <button onClick={() => handleDownloadImage("jpeg")} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm neon-glow-purple hover:opacity-90 transition-all">
+            <Download size={16} /> Download JPEG
           </button>
-          <button onClick={handleSave} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold text-sm neon-glow-gold hover:opacity-90 transition-all">
-            <Save size={16} /> Save Template
+          <button onClick={() => handleDownloadImage("png")} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold text-sm neon-glow-gold hover:opacity-90 transition-all">
+            <ImageIcon size={16} /> Download PNG
           </button>
         </div>
       </div>

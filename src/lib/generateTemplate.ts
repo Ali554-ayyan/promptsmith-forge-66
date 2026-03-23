@@ -100,6 +100,57 @@ export function previewHTML(html: string) {
   window.open(url, "_blank");
 }
 
+export async function downloadAsImage(html: string, filename: string, format: "jpeg" | "png") {
+  const { default: html2canvas } = await import("html2canvas");
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.left = "-9999px";
+  iframe.style.top = "0";
+  iframe.style.width = "1440px";
+  iframe.style.height = "900px";
+  iframe.style.border = "none";
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) {
+    document.body.removeChild(iframe);
+    return;
+  }
+
+  iframeDoc.open();
+  iframeDoc.write(html);
+  iframeDoc.close();
+
+  await new Promise((r) => setTimeout(r, 1500));
+
+  const body = iframeDoc.body;
+  const fullHeight = iframeDoc.documentElement.scrollHeight;
+  iframe.style.height = fullHeight + "px";
+
+  await new Promise((r) => setTimeout(r, 500));
+
+  const canvas = await html2canvas(body, {
+    width: 1440,
+    height: fullHeight,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: "#0a1428",
+    scale: 2,
+  });
+
+  document.body.removeChild(iframe);
+
+  const mimeType = format === "png" ? "image/png" : "image/jpeg";
+  const dataUrl = canvas.toDataURL(mimeType, 0.95);
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
