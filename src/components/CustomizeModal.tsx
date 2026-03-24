@@ -22,6 +22,15 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
   const [stats, setStats] = useState([{ number: "", label: "" }]);
   const [testimonialQuote, setTestimonialQuote] = useState("");
   const [testimonialName, setTestimonialName] = useState("");
+  const [socialLinks, setSocialLinks] = useState({
+    instagram: "",
+    facebook: "",
+    twitter: "",
+    whatsapp: "",
+    tiktok: "",
+    youtube: "",
+    linkedin: "",
+  });
 
   const logoRef = useRef<HTMLInputElement>(null);
   const heroRef = useRef<HTMLInputElement>(null);
