@@ -852,6 +852,34 @@ export function generateHTML(data: TemplateData): string {
         text-align: center;
       }
     }
+    .social-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 18px;
+    }
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+      color: rgba(226,236,255,0.80);
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 600;
+      transition: 0.25s ease;
+      backdrop-filter: blur(8px);
+    }
+    .social-link:hover {
+      background: ${hexToRgba(primaryColor, 0.18)};
+      color: white;
+      box-shadow: inset 0 0 0 1px ${hexToRgba(primaryColor, 0.32)}, 0 0 20px ${hexToRgba(primaryColor, 0.15)};
+    }
+    .social-link .social-icon { font-size: 1.1rem; }
   </style>
 </head>
 <body>
