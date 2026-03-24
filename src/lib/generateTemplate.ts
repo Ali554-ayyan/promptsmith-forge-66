@@ -22,6 +22,15 @@ interface TemplateData {
   testimonialName: string;
   logoDataUrl?: string;
   heroDataUrl?: string;
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+    whatsapp?: string;
+    tiktok?: string;
+    youtube?: string;
+    linkedin?: string;
+  };
 }
 
 const templateImageMap: Record<string, string> = {
