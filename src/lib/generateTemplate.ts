@@ -170,6 +170,26 @@ export function generateHTML(data: TemplateData): string {
       </section>`
     : "";
 
+  const socialIcons: Record<string, { icon: string; label: string }> = {
+    instagram: { icon: "📸", label: "Instagram" },
+    facebook: { icon: "📘", label: "Facebook" },
+    twitter: { icon: "🐦", label: "Twitter / X" },
+    whatsapp: { icon: "💬", label: "WhatsApp" },
+    tiktok: { icon: "🎵", label: "TikTok" },
+    youtube: { icon: "▶️", label: "YouTube" },
+    linkedin: { icon: "💼", label: "LinkedIn" },
+  };
+
+  const socialHTML = data.socialLinks
+    ? Object.entries(data.socialLinks)
+        .filter(([, url]) => url && url.trim())
+        .map(([key, url]) => {
+          const info = socialIcons[key] || { icon: "🔗", label: key };
+          return `<a href="${escapeHtml(url!)}" target="_blank" rel="noopener noreferrer" class="social-link"><span class="social-icon">${info.icon}</span>${info.label}</a>`;
+        })
+        .join("")
+    : "";
+
   const brandName = escapeHtml(data.businessName || "My Business");
   const subheadline = escapeHtml(data.subheadline || "Your compelling subheadline goes here.");
   const ctaText = escapeHtml(data.ctaText || "GET STARTED");
