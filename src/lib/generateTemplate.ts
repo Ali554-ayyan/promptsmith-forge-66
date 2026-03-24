@@ -1017,6 +1017,7 @@ export function generateHTML(data: TemplateData): string {
           <a href="#contact">Contact</a>
         </div>
       </div>
+      ${socialHTML ? `<div class="social-bar">${socialHTML}</div>` : ""}
       <div class="copyright">© ${new Date().getFullYear()} ${brandName} — Built with LandingForge ❤️</div>
     </footer>
   </div>
