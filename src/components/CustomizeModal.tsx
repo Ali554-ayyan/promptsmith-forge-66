@@ -62,6 +62,7 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
       testimonialName,
       logoDataUrl,
       heroDataUrl,
+      socialLinks,
     };
   };
 
