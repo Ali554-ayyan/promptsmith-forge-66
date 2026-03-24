@@ -192,6 +192,32 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
             <input value={testimonialName} onChange={(e) => setTestimonialName(e.target.value)}
               placeholder="Jane Doe, CEO" className="w-full mt-2 px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground" />
           </div>
+
+          {/* Social Media Links (Optional) */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-2">Social Media Links <span className="text-xs text-muted-foreground/60">(Optional)</span></label>
+            <div className="space-y-2">
+              {[
+                { key: "instagram" as const, label: "Instagram", placeholder: "https://instagram.com/yourbrand", icon: "📸" },
+                { key: "facebook" as const, label: "Facebook", placeholder: "https://facebook.com/yourbrand", icon: "📘" },
+                { key: "twitter" as const, label: "Twitter / X", placeholder: "https://x.com/yourbrand", icon: "🐦" },
+                { key: "whatsapp" as const, label: "WhatsApp", placeholder: "https://wa.me/923001234567", icon: "💬" },
+                { key: "tiktok" as const, label: "TikTok", placeholder: "https://tiktok.com/@yourbrand", icon: "🎵" },
+                { key: "youtube" as const, label: "YouTube", placeholder: "https://youtube.com/@yourbrand", icon: "▶️" },
+                { key: "linkedin" as const, label: "LinkedIn", placeholder: "https://linkedin.com/company/yourbrand", icon: "💼" },
+              ].map((s) => (
+                <div key={s.key} className="flex items-center gap-2">
+                  <span className="text-base w-6 text-center">{s.icon}</span>
+                  <input
+                    value={socialLinks[s.key]}
+                    onChange={(e) => setSocialLinks({ ...socialLinks, [s.key]: e.target.value })}
+                    placeholder={s.placeholder}
+                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground focus:border-primary focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Action buttons */}
