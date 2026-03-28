@@ -1,13 +1,3 @@
-import template1 from "@/assets/template-1.png";
-import template2 from "@/assets/template-2.jpg";
-import template3 from "@/assets/template-3.jpg";
-import template4 from "@/assets/template-4.jpg";
-import template5 from "@/assets/template-5.jpg";
-import template6 from "@/assets/template-6.jpg";
-import template7 from "@/assets/template-7.jpg";
-import template8 from "@/assets/template-8.jpg";
-import template9 from "@/assets/template-9.jpg";
-
 interface TemplateData {
   businessName: string;
   headline: string;
@@ -33,30 +23,12 @@ interface TemplateData {
   };
 }
 
-const templateImageMap: Record<string, string> = {
-  "Alphabet Creative": template1,
-  "Futuristic Exhibition": template2,
-  "Geometric Shapes": template3,
-  "Fashion Forward": template4,
-  "Polygonal Burst": template5,
-  "Education Portal": template6,
-  "Ocean Dive": template7,
-  "Corporate Landing": template8,
-  "Space Creative": template9,
-};
-
-function absoluteAssetUrl(path?: string) {
-  if (!path) return "";
-  if (/^https?:/i.test(path) || path.startsWith("data:")) return path;
-  return new URL(path, window.location.origin).href;
-}
-
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
@@ -67,9 +39,8 @@ function waitForImages(doc: Document) {
       (img) =>
         new Promise<void>((resolve) => {
           if (img.complete) { resolve(); return; }
-          const handleDone = () => resolve();
-          img.addEventListener("load", handleDone, { once: true });
-          img.addEventListener("error", handleDone, { once: true });
+          img.addEventListener("load", () => resolve(), { once: true });
+          img.addEventListener("error", () => resolve(), { once: true });
         }),
     ),
   );
@@ -78,73 +49,72 @@ function waitForImages(doc: Document) {
 async function prepareIframeDocument(doc: Document) {
   await waitForImages(doc);
   if ("fonts" in doc) {
-    try {
-      await (doc as Document & { fonts?: FontFaceSet }).fonts?.ready;
-    } catch { /* ignore */ }
+    try { await (doc as any).fonts?.ready; } catch { /* ignore */ }
   }
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 600));
 }
 
-/**
- * Converts an image URL to a base64 data URL so it works reliably
- * inside blob previews and html2canvas iframes.
- */
-async function toDataUrl(url: string): Promise<string> {
-  if (!url) return "";
-  if (url.startsWith("data:")) return url;
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return url;
-  }
-}
+/* ─── Shared HTML parts ─── */
 
-/**
- * Generates an HTML page that uses the ORIGINAL template image as a
- * full-screen background. User details are overlaid on top.
- * Template images are embedded as data URLs for reliable rendering.
- */
-export async function generateHTML(data: TemplateData): Promise<string> {
-  const rawTemplateUrl = absoluteAssetUrl(templateImageMap[data.themeStyle] || template8);
-  const templateImageUrl = await toDataUrl(rawTemplateUrl);
-  const heroImageUrl = data.heroDataUrl || "";
-  const logoImageUrl = data.logoDataUrl || "";
-
+function buildNav(data: TemplateData): string {
   const brandName = escapeHtml(data.businessName || "My Business");
-  const headline = escapeHtml(data.headline || "Your Amazing Headline");
-  const subheadline = escapeHtml(data.subheadline || "Your compelling subheadline goes here.");
-  const ctaText = escapeHtml(data.ctaText || "GET STARTED");
-  const primaryColor = data.primaryColor || "#00BFFF";
-  const accentColor = data.accentColor || "#FFD700";
-
-  /* Navigation */
-  const menuHTML = data.menuItems
-    .filter((item) => item.label)
-    .map((item) => `<a href="${escapeHtml(item.url || "#")}" class="nav-link">${escapeHtml(item.label)}</a>`)
+  const logoHtml = data.logoDataUrl
+    ? `<img src="${data.logoDataUrl}" alt="logo" style="width:100%;height:100%;object-fit:cover;"/>`
+    : `<span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.2rem;color:#fff;">${brandName.charAt(0)}</span>`;
+  const menuHtml = data.menuItems
+    .filter((m) => m.label)
+    .map((m) => `<a href="${escapeHtml(m.url || "#")}" class="nav-link">${escapeHtml(m.label)}</a>`)
     .join("");
+  return `
+  <nav class="top-nav">
+    <div class="brand">
+      <div class="brand-logo">${logoHtml}</div>
+      <span class="brand-name">${brandName}</span>
+    </div>
+    ${menuHtml ? `<div class="nav-links">${menuHtml}</div>` : ""}
+  </nav>`;
+}
 
-  /* Stats */
-  const statsHTML = data.stats
-    .filter((s) => s.number || s.label)
+function buildHero(data: TemplateData): string {
+  const headline = escapeHtml(data.headline || "Your Amazing Headline");
+  const sub = escapeHtml(data.subheadline || "Your compelling subheadline goes here.");
+  const cta = escapeHtml(data.ctaText || "GET STARTED");
+  const heroImg = data.heroDataUrl
+    ? `<div class="hero-image-wrap"><img src="${data.heroDataUrl}" alt="hero" class="hero-image"/></div>`
+    : "";
+  return `
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">${headline}</h1>
+      <p class="hero-sub">${sub}</p>
+      <a href="#" class="cta-btn">${cta}</a>
+    </div>
+    ${heroImg}
+  </section>`;
+}
+
+function buildStats(data: TemplateData): string {
+  const items = data.stats.filter((s) => s.number || s.label);
+  if (!items.length) return "";
+  const html = items
     .map((s) => `<div class="stat"><span class="stat-num">${escapeHtml(s.number || "0")}</span><span class="stat-lbl">${escapeHtml(s.label || "")}</span></div>`)
     .join("");
+  return `<section class="stats-section"><div class="stats-row">${html}</div></section>`;
+}
 
-  /* Testimonial */
-  const testimonialHTML = data.testimonialQuote
-    ? `<div class="testimonial">
-        <div class="tq">"${escapeHtml(data.testimonialQuote)}"</div>
-        ${data.testimonialName ? `<div class="ta">— ${escapeHtml(data.testimonialName)}</div>` : ""}
-      </div>`
-    : "";
+function buildTestimonial(data: TemplateData): string {
+  if (!data.testimonialQuote) return "";
+  return `
+  <section class="testimonial-section">
+    <div class="testimonial">
+      <div class="tq">"${escapeHtml(data.testimonialQuote)}"</div>
+      ${data.testimonialName ? `<div class="ta">— ${escapeHtml(data.testimonialName)}</div>` : ""}
+    </div>
+  </section>`;
+}
 
-  /* Social */
-  const socialIcons: Record<string, { icon: string; label: string }> = {
+function buildSocial(data: TemplateData): string {
+  const icons: Record<string, { icon: string; label: string }> = {
     instagram: { icon: "📸", label: "Instagram" },
     facebook: { icon: "📘", label: "Facebook" },
     twitter: { icon: "🐦", label: "Twitter" },
@@ -153,242 +123,302 @@ export async function generateHTML(data: TemplateData): Promise<string> {
     youtube: { icon: "▶️", label: "YouTube" },
     linkedin: { icon: "💼", label: "LinkedIn" },
   };
+  if (!data.socialLinks) return "";
+  const links = Object.entries(data.socialLinks)
+    .filter(([, url]) => url && url.trim())
+    .map(([key, url]) => {
+      const info = icons[key] || { icon: "🔗", label: key };
+      return `<a href="${escapeHtml(url!)}" target="_blank" rel="noopener noreferrer" class="soc-link"><span>${info.icon}</span> ${info.label}</a>`;
+    })
+    .join("");
+  if (!links) return "";
+  return `<section class="social-section"><div class="social-bar">${links}</div></section>`;
+}
 
-  const socialHTML = data.socialLinks
-    ? Object.entries(data.socialLinks)
-        .filter(([, url]) => url && url.trim())
-        .map(([key, url]) => {
-          const info = socialIcons[key] || { icon: "🔗", label: key };
-          return `<a href="${escapeHtml(url!)}" target="_blank" rel="noopener noreferrer" class="soc-link"><span>${info.icon}</span> ${info.label}</a>`;
-        })
-        .join("")
-    : "";
+function buildFooter(data: TemplateData): string {
+  const name = escapeHtml(data.businessName || "My Business");
+  return `<footer class="footer-bar">© ${new Date().getFullYear()} ${name}. All rights reserved.</footer>`;
+}
+
+/* ─── Template-specific background CSS ─── */
+
+function getTemplateCSS(style: string, primary: string, accent: string): string {
+  const templates: Record<string, string> = {
+    "Alphabet Creative": `
+      body{background:linear-gradient(135deg,#0d0d0d 0%,#1a1a2e 50%,#16213e 100%);}
+      .hero-section{background:radial-gradient(ellipse at 30% 50%,${primary}15 0%,transparent 60%);}
+      body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
+        background:repeating-linear-gradient(45deg,transparent,transparent 80px,${primary}06 80px,${primary}06 82px);
+        animation:drift 30s linear infinite;pointer-events:none;z-index:0;}
+      @keyframes drift{to{transform:translate(80px,80px);}}
+      .hero-title{background:linear-gradient(135deg,#fff,${accent});-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    `,
+    "Futuristic Exhibition": `
+      body{background:linear-gradient(180deg,#030714 0%,#0c1445 40%,#1e0533 100%);}
+      .hero-section{background:radial-gradient(circle at 70% 30%,${primary}20 0%,transparent 50%);}
+      body::before{content:'';position:fixed;inset:0;
+        background:linear-gradient(90deg,${primary}08 1px,transparent 1px),linear-gradient(0deg,${primary}08 1px,transparent 1px);
+        background-size:60px 60px;pointer-events:none;z-index:0;}
+      body::after{content:'';position:fixed;top:20%;right:10%;width:300px;height:300px;
+        border-radius:50%;background:radial-gradient(circle,${accent}15,transparent 70%);
+        filter:blur(60px);pointer-events:none;z-index:0;}
+      .hero-title{text-shadow:0 0 40px ${primary}66,0 0 80px ${primary}33;}
+    `,
+    "Geometric Shapes": `
+      body{background:linear-gradient(160deg,#0a0a0a 0%,#1a0a2e 50%,#0a1a2e 100%);}
+      body::before{content:'';position:fixed;inset:0;
+        background:
+          linear-gradient(60deg,${primary}10 25%,transparent 25%),
+          linear-gradient(-60deg,${accent}08 25%,transparent 25%),
+          linear-gradient(120deg,${primary}06 25%,transparent 25%);
+        pointer-events:none;z-index:0;}
+      body::after{content:'';position:fixed;top:10%;left:5%;width:400px;height:400px;
+        border:2px solid ${accent}20;transform:rotate(45deg);pointer-events:none;z-index:0;}
+      .hero-section::before{content:'';position:absolute;bottom:0;right:10%;width:200px;height:200px;
+        border:3px solid ${primary}25;border-radius:50%;pointer-events:none;}
+      .hero-title{background:linear-gradient(90deg,${accent},#fff,${primary});-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    `,
+    "Fashion Forward": `
+      body{background:linear-gradient(135deg,#0a0a0a 0%,#1a0f0f 50%,#2a1520 100%);}
+      .hero-section{background:radial-gradient(ellipse at 80% 50%,${accent}12 0%,transparent 50%);}
+      body::before{content:'';position:fixed;inset:0;
+        background:repeating-linear-gradient(0deg,transparent,transparent 100px,${accent}04 100px,${accent}04 101px);
+        pointer-events:none;z-index:0;}
+      .hero-title{font-style:italic;letter-spacing:0.05em;
+        text-shadow:2px 2px 0 ${accent}44,-2px -2px 0 ${primary}44;}
+      .cta-btn{border-radius:0!important;text-transform:uppercase;letter-spacing:4px;}
+    `,
+    "Polygonal Burst": `
+      body{background:linear-gradient(135deg,#050510 0%,#0a1628 40%,#0f0a28 100%);}
+      body::before{content:'';position:fixed;inset:0;
+        background:
+          radial-gradient(circle at 20% 80%,${primary}18 0%,transparent 40%),
+          radial-gradient(circle at 80% 20%,${accent}15 0%,transparent 40%),
+          radial-gradient(circle at 50% 50%,${primary}08 0%,transparent 60%);
+        pointer-events:none;z-index:0;}
+      body::after{content:'';position:fixed;top:5%;right:15%;
+        width:0;height:0;border-left:150px solid transparent;border-right:150px solid transparent;
+        border-bottom:260px solid ${primary}08;pointer-events:none;z-index:0;}
+      .hero-title{text-shadow:0 0 60px ${accent}44;}
+    `,
+    "Education Portal": `
+      body{background:linear-gradient(180deg,#0a1929 0%,#0d2137 50%,#071420 100%);}
+      .hero-section{background:radial-gradient(ellipse at 50% 0%,${primary}18 0%,transparent 50%);}
+      body::before{content:'';position:fixed;inset:0;
+        background:
+          radial-gradient(circle at 15% 15%,${primary}12 0%,transparent 20%),
+          radial-gradient(circle at 85% 85%,${accent}10 0%,transparent 20%),
+          radial-gradient(circle at 50% 50%,${primary}05 0%,transparent 40%);
+        pointer-events:none;z-index:0;}
+      .hero-title{color:${accent};}
+      .stat{border-left:3px solid ${primary};}
+    `,
+    "Ocean Dive": `
+      body{background:linear-gradient(180deg,#020c1b 0%,#0a192f 30%,#0d3b66 70%,#041c32 100%);}
+      body::before{content:'';position:fixed;inset:0;
+        background:
+          radial-gradient(ellipse at 30% 70%,${primary}20 0%,transparent 50%),
+          radial-gradient(ellipse at 70% 30%,${accent}12 0%,transparent 50%);
+        pointer-events:none;z-index:0;animation:ocean 8s ease-in-out infinite alternate;}
+      @keyframes ocean{0%{opacity:0.7;}100%{opacity:1;}}
+      body::after{content:'';position:fixed;bottom:0;left:0;right:0;height:40%;
+        background:linear-gradient(0deg,${primary}15,transparent);pointer-events:none;z-index:0;}
+      .hero-title{text-shadow:0 4px 30px ${primary}66;}
+    `,
+    "Corporate Landing": `
+      body{background:linear-gradient(160deg,#0c0c0c 0%,#1a1a2e 50%,#0f0f23 100%);}
+      .hero-section{background:radial-gradient(ellipse at 0% 50%,${primary}10 0%,transparent 50%);}
+      body::before{content:'';position:fixed;inset:0;
+        background:linear-gradient(90deg,${primary}04 1px,transparent 1px),linear-gradient(0deg,${primary}04 1px,transparent 1px);
+        background-size:80px 80px;pointer-events:none;z-index:0;}
+      .hero-title{font-weight:800;letter-spacing:-0.02em;}
+      .cta-btn{border-radius:8px!important;}
+    `,
+    "Space Creative": `
+      body{background:linear-gradient(180deg,#000010 0%,#0a0a2e 40%,#1a0a3e 70%,#0a0020 100%);}
+      body::before{content:'';position:fixed;inset:0;
+        background:
+          radial-gradient(1px 1px at 20% 30%,#fff 0%,transparent 100%),
+          radial-gradient(1px 1px at 40% 70%,#fff 0%,transparent 100%),
+          radial-gradient(1px 1px at 60% 20%,#fff 0%,transparent 100%),
+          radial-gradient(1px 1px at 80% 60%,#fff 0%,transparent 100%),
+          radial-gradient(2px 2px at 10% 80%,${accent}88 0%,transparent 100%),
+          radial-gradient(2px 2px at 90% 40%,${primary}88 0%,transparent 100%),
+          radial-gradient(1px 1px at 50% 50%,#fff 0%,transparent 100%),
+          radial-gradient(1px 1px at 30% 90%,#fff 0%,transparent 100%),
+          radial-gradient(1px 1px at 70% 10%,#fff 0%,transparent 100%),
+          radial-gradient(1px 1px at 15% 55%,#fff 0%,transparent 100%);
+        pointer-events:none;z-index:0;}
+      body::after{content:'';position:fixed;top:10%;left:30%;width:500px;height:500px;
+        border-radius:50%;background:radial-gradient(circle,${primary}12,${accent}06,transparent 70%);
+        filter:blur(80px);pointer-events:none;z-index:0;}
+      .hero-title{text-shadow:0 0 50px ${primary}88,0 0 100px ${accent}44;}
+    `,
+  };
+  return templates[style] || templates["Corporate Landing"]!;
+}
+
+/* ─── Main generator ─── */
+
+export async function generateHTML(data: TemplateData): Promise<string> {
+  const brandName = escapeHtml(data.businessName || "My Business");
+  const primary = data.primaryColor || "#00BFFF";
+  const accent = data.accentColor || "#FFD700";
+
+  const templateCSS = getTemplateCSS(data.themeStyle, primary, accent);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>${brandName}</title>
-  <base href="${window.location.origin}/" />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    html,body{width:100%;min-height:100vh;overflow-x:hidden;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'Outfit',sans-serif;color:#fff;min-height:100vh;overflow-x:hidden;position:relative;}
 
-    /* ======== FULL-SCREEN ORIGINAL TEMPLATE BACKGROUND ======== */
-    body{
-      font-family:'Outfit',sans-serif;
-      color:#fff;
-      background:#000;
-    }
-    .template-bg{
-      position:relative;
-      width:100%;
-    }
-    .template-bg img.bg-img{
-      display:block;
-      width:100%;
-      height:auto;
-    }
+    /* === TEMPLATE-SPECIFIC BACKGROUND === */
+    ${templateCSS}
 
-    /* ======== TOP NAV OVERLAY ======== */
-    .overlay-nav{
-      position:absolute;
-      top:0;left:0;right:0;
-      z-index:10;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:18px 32px;
-      background:linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 70%, transparent 100%);
+    /* === GLOBAL === */
+    section,nav,footer{position:relative;z-index:1;}
+
+    /* === NAV === */
+    .top-nav{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:20px 40px;
+      background:rgba(0,0,0,0.3);backdrop-filter:blur(20px);
+      border-bottom:1px solid rgba(255,255,255,0.06);
     }
-    .brand{
-      display:flex;align-items:center;gap:10px;
-    }
+    .brand{display:flex;align-items:center;gap:12px;}
     .brand-logo{
-      width:38px;height:38px;border-radius:10px;overflow:hidden;
-      background:linear-gradient(135deg,${primaryColor},${accentColor});
-      display:grid;place-items:center;
-      box-shadow:0 0 20px ${primaryColor}44;
-      flex-shrink:0;
+      width:44px;height:44px;border-radius:12px;overflow:hidden;
+      background:linear-gradient(135deg,${primary},${accent});
+      display:grid;place-items:center;flex-shrink:0;
+      box-shadow:0 0 20px ${primary}33;
     }
     .brand-logo img{width:100%;height:100%;object-fit:cover;}
-    .brand-logo .letter{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;color:#fff;}
-    .brand-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.5);}
+    .brand-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.15rem;color:#fff;}
     .nav-links{display:flex;gap:4px;flex-wrap:wrap;}
     .nav-link{
-      color:rgba(255,255,255,0.85);text-decoration:none;
-      padding:8px 14px;font-size:0.78rem;letter-spacing:1px;font-weight:600;
-      border-radius:999px;transition:0.2s;
+      color:rgba(255,255,255,0.75);text-decoration:none;
+      padding:8px 16px;font-size:0.82rem;font-weight:600;letter-spacing:0.5px;
+      border-radius:999px;transition:all 0.25s;
     }
-    .nav-link:hover{background:rgba(255,255,255,0.12);color:#fff;}
+    .nav-link:hover{background:rgba(255,255,255,0.1);color:#fff;}
 
-    /* ======== HERO TEXT OVERLAY (centered on image) ======== */
-    .overlay-hero{
-      position:absolute;
-      bottom:8%;left:0;right:0;
-      z-index:10;
-      text-align:center;
-      padding:0 32px;
+    /* === HERO === */
+    .hero-section{
+      display:flex;align-items:center;justify-content:center;
+      min-height:85vh;padding:80px 40px;gap:60px;
+      position:relative;
     }
-    .overlay-hero h1{
+    .hero-content{max-width:650px;flex:1;}
+    .hero-title{
       font-family:'Space Grotesk',sans-serif;
-      font-size:clamp(2rem,5vw,4.2rem);
-      font-weight:800;
-      line-height:1.05;
-      text-shadow:0 4px 30px rgba(0,0,0,0.7),0 0 60px rgba(0,0,0,0.4);
-      margin-bottom:12px;
+      font-size:clamp(2.4rem,5.5vw,4.5rem);
+      font-weight:800;line-height:1.08;
+      margin-bottom:20px;color:#fff;
     }
-    .overlay-hero h1 .acc{color:${accentColor};}
-    .overlay-hero p{
-      max-width:700px;margin:0 auto 20px;
-      font-size:1.05rem;line-height:1.7;
-      color:rgba(255,255,255,0.88);
-      text-shadow:0 2px 12px rgba(0,0,0,0.6);
+    .hero-sub{
+      font-size:1.1rem;line-height:1.8;
+      color:rgba(255,255,255,0.7);
+      margin-bottom:32px;max-width:540px;
     }
     .cta-btn{
-      display:inline-block;
-      padding:14px 32px;border-radius:14px;
-      font-weight:700;font-size:0.95rem;
+      display:inline-block;padding:16px 36px;
+      border-radius:14px;font-weight:700;font-size:0.95rem;
       color:#000;text-decoration:none;
-      background:linear-gradient(135deg,${accentColor},${primaryColor});
-      box-shadow:0 8px 30px ${primaryColor}44;
-      transition:0.2s;
+      background:linear-gradient(135deg,${accent},${primary});
+      box-shadow:0 8px 30px ${primary}44;
+      transition:all 0.3s;
     }
-    .cta-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px ${primaryColor}66;}
+    .cta-btn:hover{transform:translateY(-3px);box-shadow:0 14px 40px ${primary}66;}
 
-    /* ======== HERO IMAGE OVERLAY ======== */
-    .hero-photo{
-      position:absolute;
-      bottom:12%;right:5%;
-      width:clamp(120px,14vw,200px);
-      height:clamp(120px,14vw,200px);
-      border-radius:20px;object-fit:cover;
-      border:3px solid ${accentColor}88;
-      box-shadow:0 12px 40px rgba(0,0,0,0.5);
-      z-index:10;
+    .hero-image-wrap{
+      flex:0 0 auto;width:clamp(250px,30vw,420px);
+      height:clamp(300px,35vw,500px);
+      border-radius:24px;overflow:hidden;position:relative;
+      box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 40px ${primary}22;
+      border:2px solid rgba(255,255,255,0.08);
     }
+    .hero-image{width:100%;height:100%;object-fit:cover;display:block;}
 
-    /* ======== SECTIONS BELOW TEMPLATE IMAGE ======== */
-    .sections{
-      background:linear-gradient(180deg,#0a0e1a 0%,#060a14 100%);
-      padding:40px 32px 0;
-    }
-    .section-inner{max-width:1200px;margin:0 auto;}
-
-    /* Stats */
+    /* === STATS === */
+    .stats-section{padding:60px 40px;background:rgba(0,0,0,0.2);}
     .stats-row{
-      display:flex;flex-wrap:wrap;gap:16px;justify-content:center;
-      margin-bottom:40px;
+      display:flex;flex-wrap:wrap;gap:20px;justify-content:center;
+      max-width:1100px;margin:0 auto;
     }
     .stat{
-      padding:20px 28px;border-radius:18px;
-      background:rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.06);
-      text-align:center;min-width:130px;
-      backdrop-filter:blur(8px);
+      padding:28px 36px;border-radius:20px;text-align:center;min-width:150px;
+      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
+      backdrop-filter:blur(10px);transition:transform 0.3s;
     }
+    .stat:hover{transform:translateY(-4px);}
     .stat-num{
       display:block;font-family:'Space Grotesk',sans-serif;
-      font-size:1.8rem;font-weight:800;
-      background:linear-gradient(135deg,${accentColor},${primaryColor});
+      font-size:2rem;font-weight:800;
+      background:linear-gradient(135deg,${accent},${primary});
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;
     }
-    .stat-lbl{display:block;margin-top:6px;color:rgba(255,255,255,0.55);font-size:0.85rem;}
+    .stat-lbl{display:block;margin-top:8px;color:rgba(255,255,255,0.5);font-size:0.88rem;font-weight:500;}
 
-    /* Testimonial */
+    /* === TESTIMONIAL === */
+    .testimonial-section{padding:60px 40px;}
     .testimonial{
-      max-width:800px;margin:0 auto 40px;text-align:center;
-      padding:32px;border-radius:24px;
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.06);
+      max-width:800px;margin:0 auto;text-align:center;
+      padding:40px;border-radius:24px;
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
+      backdrop-filter:blur(10px);
     }
-    .tq{font-size:1.1rem;line-height:1.8;color:rgba(255,255,255,0.78);font-style:italic;}
-    .ta{margin-top:14px;font-weight:700;color:${accentColor};}
+    .tq{font-size:1.15rem;line-height:1.9;color:rgba(255,255,255,0.75);font-style:italic;}
+    .ta{margin-top:16px;font-weight:700;color:${accent};font-size:0.95rem;}
 
-    /* Social */
-    .social-bar{
-      display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
-      margin-bottom:30px;
-    }
+    /* === SOCIAL === */
+    .social-section{padding:40px;text-align:center;}
+    .social-bar{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;}
     .soc-link{
-      display:inline-flex;align-items:center;gap:6px;
-      padding:10px 18px;border-radius:999px;
-      background:rgba(255,255,255,0.05);
-      border:1px solid rgba(255,255,255,0.08);
-      color:rgba(255,255,255,0.75);text-decoration:none;
-      font-size:0.82rem;font-weight:600;transition:0.2s;
+      display:inline-flex;align-items:center;gap:8px;
+      padding:12px 22px;border-radius:999px;
+      background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
+      color:rgba(255,255,255,0.7);text-decoration:none;
+      font-size:0.85rem;font-weight:600;transition:all 0.25s;
     }
-    .soc-link:hover{background:${primaryColor}22;color:#fff;border-color:${primaryColor}44;}
+    .soc-link:hover{background:${primary}22;color:#fff;border-color:${primary}44;transform:translateY(-2px);}
 
-    /* Footer */
+    /* === FOOTER === */
     .footer-bar{
-      text-align:center;padding:24px 0;
-      color:rgba(255,255,255,0.35);font-size:0.82rem;
+      text-align:center;padding:28px 20px;
+      color:rgba(255,255,255,0.3);font-size:0.82rem;
       border-top:1px solid rgba(255,255,255,0.06);
+      background:rgba(0,0,0,0.2);
     }
 
     @media(max-width:768px){
-      .overlay-nav{padding:12px 16px;flex-direction:column;gap:8px;}
-      .overlay-hero{bottom:5%;padding:0 16px;}
-      .hero-photo{width:100px;height:100px;right:10px;bottom:6%;}
-      .sections{padding:24px 16px 0;}
-      .stats-row{gap:10px;}
-      .stat{min-width:100px;padding:14px 16px;}
+      .top-nav{padding:14px 20px;flex-direction:column;gap:10px;}
+      .hero-section{flex-direction:column;padding:50px 20px;min-height:auto;gap:30px;text-align:center;}
+      .hero-sub{margin-left:auto;margin-right:auto;}
+      .hero-image-wrap{width:90%;height:300px;}
+      .stats-section,.testimonial-section,.social-section{padding:30px 20px;}
+      .stat{min-width:120px;padding:20px 20px;}
     }
   </style>
 </head>
 <body>
-  <!-- ===== ORIGINAL TEMPLATE AS FULL BACKGROUND ===== -->
-  <div class="template-bg">
-    <img class="bg-img" src="${templateImageUrl}" alt="${brandName} template" />
-
-    <!-- Nav overlay -->
-    <nav class="overlay-nav">
-      <div class="brand">
-        <div class="brand-logo">${logoImageUrl ? `<img src="${logoImageUrl}" alt="logo"/>` : `<span class="letter">${brandName.charAt(0)}</span>`}</div>
-        <span class="brand-name">${brandName}</span>
-      </div>
-      ${menuHTML ? `<div class="nav-links">${menuHTML}</div>` : ""}
-    </nav>
-
-    <!-- Hero text overlay -->
-    <div class="overlay-hero">
-      <h1><span class="acc">${headline}</span></h1>
-      <p>${subheadline}</p>
-      <a href="#" class="cta-btn">${ctaText}</a>
-    </div>
-
-    <!-- Uploaded hero photo -->
-    ${heroImageUrl ? `<img class="hero-photo" src="${heroImageUrl}" alt="${brandName}" />` : ""}
-  </div>
-
-  <!-- ===== EXTRA SECTIONS BELOW ===== -->
-  ${(statsHTML || testimonialHTML || socialHTML) ? `
-  <div class="sections">
-    <div class="section-inner">
-      ${statsHTML ? `<div class="stats-row">${statsHTML}</div>` : ""}
-      ${testimonialHTML}
-      ${socialHTML ? `<div class="social-bar">${socialHTML}</div>` : ""}
-    </div>
-    <div class="footer-bar">© ${new Date().getFullYear()} ${brandName}</div>
-  </div>` : ""}
+  ${buildNav(data)}
+  ${buildHero(data)}
+  ${buildStats(data)}
+  ${buildTestimonial(data)}
+  ${buildSocial(data)}
+  ${buildFooter(data)}
 </body>
 </html>`;
 }
 
-export function downloadHTML(html: string, filename: string) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+/* ─── Utilities ─── */
 
 export function previewHTML(html: string) {
   const blob = new Blob([html], { type: "text/html" });
@@ -404,16 +434,13 @@ export async function downloadAsImage(html: string, filename: string, format: "j
   iframe.style.left = "-9999px";
   iframe.style.top = "0";
   iframe.style.width = "1440px";
-  iframe.style.height = "1600px";
+  iframe.style.height = "900px";
   iframe.style.border = "none";
   iframe.setAttribute("aria-hidden", "true");
   document.body.appendChild(iframe);
 
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (!iframeDoc) {
-    document.body.removeChild(iframe);
-    return;
-  }
+  if (!iframeDoc) { document.body.removeChild(iframe); return; }
 
   iframeDoc.open();
   iframeDoc.write(html);
@@ -438,7 +465,7 @@ export async function downloadAsImage(html: string, filename: string, format: "j
     windowHeight: fullHeight,
     useCORS: true,
     allowTaint: true,
-    backgroundColor: "#000",
+    backgroundColor: null,
     scale: 2,
     scrollX: 0,
     scrollY: 0,
