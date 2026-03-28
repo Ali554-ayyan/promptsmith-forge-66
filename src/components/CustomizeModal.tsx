@@ -68,14 +68,14 @@ const CustomizeModal = ({ templateId, onClose }: Props) => {
 
   const handlePreview = async () => {
     const data = await getTemplateData();
-    const html = generateHTML(data);
+    const html = await generateHTML(data);
     previewHTML(html);
     toast.success("Preview opened in a new tab!");
   };
 
   const handleDownloadImage = async (format: "jpeg" | "png") => {
     const data = await getTemplateData();
-    const html = generateHTML(data);
+    const html = await generateHTML(data);
     const filename = `${(businessName || "landing-page").toLowerCase().replace(/\s+/g, "-")}.${format}`;
     toast.info("Rendering full template… please wait.");
     await downloadAsImage(html, filename, format);
