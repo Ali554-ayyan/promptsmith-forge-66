@@ -86,16 +86,35 @@ async function prepareIframeDocument(doc: Document) {
 }
 
 /**
- * Generates an HTML page that uses the ORIGINAL template image as a
- * full-screen background. User details (business name, headline, logo,
- * hero photo, social links, stats, testimonial) are overlaid on top
- * with a semi-transparent bottom bar. The template's original design,
- * background, layout, and artwork remain 100 % visible and unmodified.
+ * Converts an image URL to a base64 data URL so it works reliably
+ * inside blob previews and html2canvas iframes.
  */
-export function generateHTML(data: TemplateData): string {
-  const templateImageUrl = absoluteAssetUrl(templateImageMap[data.themeStyle] || template8);
-  const heroImageUrl = absoluteAssetUrl(data.heroDataUrl);
-  const logoImageUrl = absoluteAssetUrl(data.logoDataUrl);
+async function toDataUrl(url: string): Promise<string> {
+  if (!url) return "";
+  if (url.startsWith("data:")) return url;
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Generates an HTML page that uses the ORIGINAL template image as a
+ * full-screen background. User details are overlaid on top.
+ * Template images are embedded as data URLs for reliable rendering.
+ */
+export async function generateHTML(data: TemplateData): Promise<string> {
+  const rawTemplateUrl = absoluteAssetUrl(templateImageMap[data.themeStyle] || template8);
+  const templateImageUrl = await toDataUrl(rawTemplateUrl);
+  const heroImageUrl = data.heroDataUrl || "";
+  const logoImageUrl = data.logoDataUrl || "";
 
   const brandName = escapeHtml(data.businessName || "My Business");
   const headline = escapeHtml(data.headline || "Your Amazing Headline");
