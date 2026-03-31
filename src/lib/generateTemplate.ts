@@ -12,6 +12,7 @@ interface TemplateData {
   testimonialName: string;
   logoDataUrl?: string;
   heroDataUrl?: string;
+  templateImageUrl?: string;
   socialLinks?: {
     instagram?: string;
     facebook?: string;
