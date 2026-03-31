@@ -266,7 +266,23 @@ export async function generateHTML(data: TemplateData): Promise<string> {
   const primary = data.primaryColor || "#00BFFF";
   const accent = data.accentColor || "#FFD700";
 
-  const templateCSS = getTemplateCSS(data.themeStyle, primary, accent);
+  // Convert template image to data URL for reliable embedding
+  let bgDataUrl = "";
+  if (data.templateImageUrl) {
+    try {
+      const resp = await fetch(data.templateImageUrl);
+      const blob = await resp.blob();
+      bgDataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch { /* fallback to CSS bg */ }
+  }
+
+  const bgStyle = bgDataUrl
+    ? `background:url('${bgDataUrl}') center top/cover no-repeat fixed;`
+    : `background:linear-gradient(160deg,#0c0c0c 0%,#1a1a2e 50%,#0f0f23 100%);`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -278,10 +294,14 @@ export async function generateHTML(data: TemplateData): Promise<string> {
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}
-    body{font-family:'Outfit',sans-serif;color:#fff;min-height:100vh;overflow-x:hidden;position:relative;}
+    body{font-family:'Outfit',sans-serif;color:#fff;min-height:100vh;overflow-x:hidden;position:relative;
+      ${bgStyle}
+    }
 
-    /* === TEMPLATE-SPECIFIC BACKGROUND === */
-    ${templateCSS}
+    /* === OVERLAY to make text readable over original template === */
+    body::before{content:'';position:fixed;inset:0;
+      background:linear-gradient(180deg,rgba(0,0,0,0.55) 0%,rgba(0,0,0,0.35) 40%,rgba(0,0,0,0.5) 100%);
+      pointer-events:none;z-index:0;}
 
     /* === GLOBAL === */
     section,nav,footer{position:relative;z-index:1;}
